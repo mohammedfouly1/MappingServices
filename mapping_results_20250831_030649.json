@@ -1,0 +1,899 @@
+{
+  "timestamp": "2025-08-31 03:06:49",
+  "model": "gpt-4o",
+  "latency_seconds": 29.645,
+  "tokens": {
+    "input": 3121,
+    "output": 5007,
+    "total": 8128
+  },
+  "parameters": {
+    "temperature": 0.2,
+    "top_p": 0.9,
+    "max_tokens": 16000,
+    "threshold": 80,
+    "compact_mode": true
+  },
+  "mappings": [
+    {
+      "First Group Code": "OBG00076",
+      "First Group Name": "Normal Delivery",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "OBG00056",
+      "First Group Name": "D&C 1D",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "OBG00048",
+      "First Group Name": "Vaginal Hysterectomy",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000450",
+      "First Group Name": "MESH PRICE (SMALL )",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000440",
+      "First Group Name": "MESH PRICE ( LARGE )",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000439",
+      "First Group Name": "AMPUTATION OF ABOVE KNEE",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000438",
+      "First Group Name": "BELOW KNEE AMPUTATION",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000437",
+      "First Group Name": "I & D OF PILONIDA ABSCESS .OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000436",
+      "First Group Name": "SUTURING -SMALL WOUND - L.A.CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000435",
+      "First Group Name": "BURN DRESSING EXTRA LARGE",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000434",
+      "First Group Name": "BURN DRESSING LARGE",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000433",
+      "First Group Name": "BURN DRESSING MEDIUM",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000432",
+      "First Group Name": "BURN DRESSING SMALL",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000431",
+      "First Group Name": "DIABTIC FOOT DEBRIDMENT OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000430",
+      "First Group Name": "DIABTIC FOOT DEBRIDMENT IN CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000421",
+      "First Group Name": "DRESSING DIABTIC FOOT",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000384",
+      "First Group Name": "PARTIAL GASTRECTOMY  .4 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000382",
+      "First Group Name": "HEMICOLECTOMY  5 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000381",
+      "First Group Name": "GASTROSTOMY, COLOSTOMY ,ILEOSTOMY  2 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000375",
+      "First Group Name": "DIAPHRAGMATIC HERNIA    2 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000372",
+      "First Group Name": "CHOLEDOCHO JEJUNOSTOMY . 3 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000370",
+      "First Group Name": "BELSEY FUNDOPLICATION. 3 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000369",
+      "First Group Name": "ADHESION RELEASE ( SURGICAL ) ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000343",
+      "First Group Name": "JEOJUNO-JEJUNOSTOMY   4 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000342",
+      "First Group Name": "EXPLORATION AND EXTRACTION OF COMMON BILE DUCT STONE  2 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000334",
+      "First Group Name": "EXCISION OF TUMOR ANTERIOR ABDOMINAL WALL AND REPAIR WITH MESH - (MAJOR)  1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000331",
+      "First Group Name": "COMPLETE RECTAL PROLAPSE ( SURGICAL )   2 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000328",
+      "First Group Name": "CLOSURE OF COLOSTOMY  3 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000320",
+      "First Group Name": "STRANGULATED HERNIA W/O RESEC. 1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000314",
+      "First Group Name": "SPLENECTOMY OPEN OR . 2DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000312",
+      "First Group Name": "PARTIAL MASTECTOMY  OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000297",
+      "First Group Name": "LAPAROSCOPIC DRAINAGE OF APPENDICULAR ABSCESS .1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000295",
+      "First Group Name": "LAPAROSCOPIC CHOLECYSTECTOMY 1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000293",
+      "First Group Name": "HEMORRHOIDECTOMY OR PILE UNDER G. A . ( SURGICAL EXCISION ) 2D",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000291",
+      "First Group Name": "GYNECOMASTIA EXCISION UNILATRAL  2 D",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000290",
+      "First Group Name": "Repairof Lacerated Wound ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000287",
+      "First Group Name": "EXPOLRATION OF LARGE WOUND & SUTURING OF MULTI CUT MUSLES  2D",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000286",
+      "First Group Name": "EXCISION OF PILONIDAL SINUS WITH RECONSTRUCTION BY FLAP 2D",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000284",
+      "First Group Name": "EXCISION OF PAROTID TUMOUR      OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000283",
+      "First Group Name": "EXCISION OF CERVICAL LYMPH NODE    OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000281",
+      "First Group Name": "EXCISION OF ABDOMINAL WALL MASS   OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000277",
+      "First Group Name": "CHOLECYSTECTOMY - SURGICAL OR .1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000273",
+      "First Group Name": "BRANCHING ANAL FISTULA OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000271",
+      "First Group Name": "APPENDECTOMY OPEN OR 1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000270",
+      "First Group Name": "LIPOMA EXCISTION  L.A.   IN  CLINIC  - MULTILIPOMAS OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000264",
+      "First Group Name": "LIPOMA EXCISTION  L.A.   IN  CLINIC  -  ONE  LIPOMA ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000261",
+      "First Group Name": "LIPOMA EXCISION G.A. - ONE LIPOMA OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000257",
+      "First Group Name": "WOUND EXPLORATION G/A ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000255",
+      "First Group Name": "TOTAL THYROIDECTOMY. 2 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000253",
+      "First Group Name": "SIMPLE MASTECTOMY   ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000248",
+      "First Group Name": "SECONDARY SUTURING OF DEHEISENCE WOUND MAJOR PROCEDURE - (MEDIUM) OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000242",
+      "First Group Name": "PERIANAL ABSCESS UNDER G.A OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000237",
+      "First Group Name": "MUSCLE REPAIR OR ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000232",
+      "First Group Name": "LYMPH NODE BIOPSY ( FEMORAL ,CERVICAL OR AXILLARY ) ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000231",
+      "First Group Name": "LATERAL SPHINCTROTOMY ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000228",
+      "First Group Name": "LAPAROSCOPIC APPENDECTOMY  1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000223",
+      "First Group Name": "INCISION HERNIA WITH PLASTY   ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000218",
+      "First Group Name": "FINE NEEDLE ASPIRATION (FNA) CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000217",
+      "First Group Name": "EXCISION SWELING  MASS OF THE BACK - SMALL  OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000209",
+      "First Group Name": "EXCISION OF PARA THYROID ADENOMA  1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000206",
+      "First Group Name": "EXCISION OF INTRAMUSCULAR MASS OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000201",
+      "First Group Name": "EXCISION OF CYSTIC SWELLING OF THE NECK - MINOR ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000193",
+      "First Group Name": "EXC. OF SUBMANDIBULAR GLAND   1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000191",
+      "First Group Name": "EVACUATION OF HAEMATOMA OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000182",
+      "First Group Name": "ANAL FISSURECTOMY OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000181",
+      "First Group Name": "ANAL DILATION  OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000171",
+      "First Group Name": "ULTRASOUND GUIDED BIOPSY W/O HISTOPATOLOGY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000169",
+      "First Group Name": "STRANGULATED HERNIA AND RESECTION ANASTOMOSIS OF BOWEL . 4 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000162",
+      "First Group Name": "SEBACEOUS CYST EXCISION L.A - CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000159",
+      "First Group Name": "REPAIR OF GASTERO OR INTESTINAL PERFORATION - SURGICAL .3 DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000150",
+      "First Group Name": "RECURRENT HERNIA ( PLASTIC REPAIR , WITH MESH ) W/OUT MESH PRICE . 1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000146",
+      "First Group Name": "PILONIDAL SINUS .",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000145",
+      "First Group Name": "PARTIAL OR SIMPLE  MASTECTOMY  W/ LYMPH NODES RESECTION W/OUT HISTOPATH ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000144",
+      "First Group Name": "PARTIAL  OR SUB-TOTAL THYROIDECTOMY WITHOUT HISTOPATH 1 DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000141",
+      "First Group Name": "OPEN CHOLECYSTECTOMY EXP. OF C.B.D. AND BILIARY SYSTEM .2DAYS",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000139",
+      "First Group Name": "MODIFIED RADICAL MASTECTOMY W/ AXILARY CLEARANCE W/O HISTOPATH - UNILATERAL.1DAY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000130",
+      "First Group Name": "LAP. UNILATERAL INGUINAL HERNIAL REPIR W/OUT MESH",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000126",
+      "First Group Name": "LAP. BILATERAL INGUINAL HERN.REPAIR W/OUT MESH PRICE 1 day",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000122",
+      "First Group Name": "INGUINAL,UMBILICAL,PARA-UMBILICAL OR FEMORAL HERNIA W/USE MESH W/O PRICE OF MESH",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000120",
+      "First Group Name": "INGROWING TOE NAIL REMOVAL WITH WEDGE RESECTION",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000117",
+      "First Group Name": "I & D OF PILONIDA ABSCESS L/A",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000111",
+      "First Group Name": "HIGH ANAL FISTULA & BRANCHED ANAL FISTULA W-OUT COLOSTOMY. 1 day",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000103",
+      "First Group Name": "FIBROADENIMA OF BREAST WITHOUT HISTOPATH.",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000095",
+      "First Group Name": "DIAGNOSTIC LAPRASCOPY WITHOUT BIOPSY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000094",
+      "First Group Name": "DIAGNOSTIC LAPRASCOPY WITH  BIOPSY",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000090",
+      "First Group Name": "CIRCUMCISION UNDER G.A",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000089",
+      "First Group Name": "CIRCUMCISION ( LESS THAN ONE YEAR ) - OPD",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000080",
+      "First Group Name": "WART EXCISION - ONE AREA",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000078",
+      "First Group Name": "TONGUE TIE RELEASE      - OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000077",
+      "First Group Name": "TONGUE TIE RELEASE    CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000075",
+      "First Group Name": "THROMBOSED PILE REMOVAL",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000061",
+      "First Group Name": "SUPERFICIAL F.B. REMOVAL - CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000058",
+      "First Group Name": "STITCHES SUPERFICIAL WOUND L.A. ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000057",
+      "First Group Name": "STITCHES FOR DEEP WOUND G.A. ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000055",
+      "First Group Name": "STITCHES FOR DEEP WOUND  CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000052",
+      "First Group Name": "SMALL ABSCESS INCISION - OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000050",
+      "First Group Name": "SIMPLE LOW ANAL FISTULA ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000045",
+      "First Group Name": "REMOVAL OF SUTURES (STITCHES)",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000041",
+      "First Group Name": "REMOVAL OF LOOSE NAILS & DRES. L.A.  CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000040",
+      "First Group Name": "REMOVAL OF FORIEGN BODY ( FB )FROM THE THIGH  OR ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000036",
+      "First Group Name": "PERIANAL ABSCESS - CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000032",
+      "First Group Name": "MUSCLE REPAIR - CLINIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000018",
+      "First Group Name": "INCISION DRAINAGE OF ABSCESS OR",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000016",
+      "First Group Name": "I&D OF SUBCUTANEOUS ABSCESS   L/A      CLNIC",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000003",
+      "First Group Name": "DEBRIDEMENT OF SMALL WOUND",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "GS000002",
+      "First Group Name": "Dressing Under Anesthesia",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "ENT00126",
+      "First Group Name": "Adenoidectomy",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "ENT00119",
+      "First Group Name": "TONSILLECTOMY W/ADENIODECTOMY WITHOUT LASER USE",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "ENT00069",
+      "First Group Name": "Tonsillectomy ",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    },
+    {
+      "First Group Code": "182",
+      "First Group Name": "Removal of Plates or Nails",
+      "Second Group Code": null,
+      "Second Group Name": null,
+      "similarity score": 50,
+      "reason for similarity score": "No similar procedure in Group2"
+    }
+  ]
+}
