@@ -18,6 +18,7 @@ def PerformMapping(first_group: List[Dict],
                    full_format_second: List[Dict] = None) -> Optional[Dict]:
     """
     Performs the actual mapping using OpenAI API with optimized token usage.
+    Uses parameters from Config which are set by the user in Streamlit.
     
     Args:
         first_group: List of First Group items (compact or full format)
@@ -34,6 +35,12 @@ def PerformMapping(first_group: List[Dict],
     
     print(f"\n{Fore.MAGENTA}{'='*60}")
     print(f"{Fore.MAGENTA}Starting Mapping Process (Optimized)")
+    print(f"{Fore.MAGENTA}Using User-Defined Parameters:")
+    print(f"{Fore.WHITE}  • Model: {Config.model}")
+    print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+    print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
+    print(f"{Fore.WHITE}  • Max Tokens: {Config.max_tokens}")
+    print(f"{Fore.WHITE}  • Threshold: {Config.threshold}")
     print(f"{Fore.MAGENTA}{'='*60}\n")
     
     # Check API key
@@ -55,7 +62,7 @@ def PerformMapping(first_group: List[Dict],
 Return JSON object with 'mappings' array. Each mapping:
 {{"fc":"<first_code>","fn":"<first_name>","sc":"<second_code>","sn":"<second_name>","s":<score_1-100>,"r":"<reason>"}}
 
-If no match: sc and sn should be null, s should be <80.
+If no match: sc and sn should be null, s should be <{Config.threshold}.
 
 Group1:
 {json.dumps(first_group, ensure_ascii=False, separators=(',', ':'))}
@@ -75,7 +82,7 @@ FIRST_GROUP:
 SECOND_GROUP:
 {json.dumps(second_group, ensure_ascii=False, separators=(',', ':'))}
 
-Return JSON object with 'mappings' array containing all mappings."""
+Return JSON object with 'mappings' array containing all mappings. Use threshold: {Config.threshold}"""
         
         if verbose:
             print(f"\n{Fore.CYAN}Optimized Prompt Preview (first 500 chars):")
@@ -88,17 +95,18 @@ Return JSON object with 'mappings' array containing all mappings."""
         print(f"{Fore.WHITE}Model: {Config.model}")
         print(f"{Fore.WHITE}Max Tokens: {Config.max_tokens}")
         print(f"{Fore.WHITE}Temperature: {Config.temperature}")
+        print(f"{Fore.WHITE}Top P: {Config.top_p}")
         print(f"{Fore.WHITE}Optimization: {'COMPACT MODE' if use_compact else 'STANDARD MODE'}")
         
         start_time = time.time()
         
         # System message based on mode
         if use_compact:
-            system_msg = "You are a laboratory mapping expert. Use the exact abbreviated JSON format specified. Be concise."
+            system_msg = f"You are a laboratory mapping expert. Use the exact abbreviated JSON format specified. Be concise. Apply threshold {Config.threshold} for similarity scores."
         else:
-            system_msg = "You are a world-class Laboratory Mapping expert. Return valid JSON with all mappings."
+            system_msg = f"You are a world-class Laboratory Mapping expert. Return valid JSON with all mappings. Apply threshold {Config.threshold} for similarity scores."
         
-        # Make API call
+        # Make API call with user-defined parameters
         try:
             response = client.chat.completions.create(
                 model=Config.model,
@@ -140,6 +148,9 @@ Return JSON object with 'mappings' array containing all mappings."""
         elapsed_time = time.time() - start_time
         
         print(f"{Fore.GREEN}✓ API call completed in {elapsed_time:.2f} seconds")
+        print(f"{Fore.WHITE}  • Model used: {Config.model}")
+        print(f"{Fore.WHITE}  • Temperature used: {Config.temperature}")
+        print(f"{Fore.WHITE}  • Top P used: {Config.top_p}")
         
         # Extract response
         response_text = response.choices[0].message.content
@@ -169,11 +180,21 @@ Return JSON object with 'mappings' array containing all mappings."""
             "mappings": mapping_results,
             "response": response,
             "elapsed_time": elapsed_time,
-            "response_text": response_text
+            "response_text": response_text,
+            "parameters_used": {
+                "model": Config.model,
+                "temperature": Config.temperature,
+                "top_p": Config.top_p,
+                "max_tokens": Config.max_tokens,
+                "threshold": Config.threshold
+            }
         }
             
     except Exception as e:
         print(f"{Fore.RED}✗ Error during API call: {str(e)}")
+        print(f"{Fore.WHITE}  • Model attempted: {Config.model}")
+        print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+        print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
         if verbose:
             print(f"{Fore.YELLOW}Traceback:")
             print(traceback.format_exc())

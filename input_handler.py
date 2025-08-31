@@ -7,10 +7,17 @@ from colorama import Fore
 
 from config import Config
 from optimization_utils import create_compact_item
-from batch_dispatcher import Dispatcher  # NEW: Import Dispatcher instead of direct API mapping
+from batch_dispatcher import Dispatcher
 
 
-def SendInputParts(excel_path: str = None, prompt_path: str = None, verbose: bool = True):
+def SendInputParts(excel_path: str = None, 
+                   prompt_path: str = None, 
+                   verbose: bool = True,
+                   temperature: float = None,
+                   top_p: float = None,
+                   model: str = None,
+                   max_batch_size: int = None,
+                   wait_between_batches: int = None):
     """
     Opens Excel file, reads First Group and Second Group sheets,
     creates JSON lists, reads prompt text, and sends to Dispatcher for batch processing.
@@ -19,10 +26,32 @@ def SendInputParts(excel_path: str = None, prompt_path: str = None, verbose: boo
         excel_path: Path to Excel file (uses default if None)
         prompt_path: Path to prompt text file (uses default if None)
         verbose: If True, prints detailed progress information
+        temperature: Temperature parameter for API (overrides Config if provided)
+        top_p: Top P parameter for API (overrides Config if provided)
+        model: Model to use (overrides Config if provided)
+        max_batch_size: Max batch size (overrides Config if provided)
+        wait_between_batches: Wait time between batches (overrides Config if provided)
     
     Returns:
         Result from mapping function or None if error
     """
+    
+    # Override Config with provided parameters
+    if temperature is not None:
+        Config.temperature = temperature
+        print(f"{Fore.CYAN}Using user-defined Temperature: {temperature}")
+    if top_p is not None:
+        Config.top_p = top_p
+        print(f"{Fore.CYAN}Using user-defined Top P: {top_p}")
+    if model is not None:
+        Config.model = model
+        print(f"{Fore.CYAN}Using user-defined Model: {model}")
+    if max_batch_size is not None:
+        Config.max_batch_size = max_batch_size
+        print(f"{Fore.CYAN}Using user-defined Max Batch Size: {max_batch_size}")
+    if wait_between_batches is not None:
+        Config.wait_between_batches = wait_between_batches
+        print(f"{Fore.CYAN}Using user-defined Wait Between Batches: {wait_between_batches}s")
     
     # Use default paths if not provided
     excel_path = excel_path or Config.excel_path
@@ -30,6 +59,14 @@ def SendInputParts(excel_path: str = None, prompt_path: str = None, verbose: boo
     
     print(f"\n{Fore.CYAN}{'='*60}")
     print(f"{Fore.CYAN}Starting SendInputParts Function")
+    print(f"{Fore.CYAN}Current Configuration:")
+    print(f"{Fore.WHITE}  • Model: {Config.model}")
+    print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+    print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
+    print(f"{Fore.WHITE}  • Max Tokens: {Config.max_tokens}")
+    print(f"{Fore.WHITE}  • Max Batch Size: {Config.max_batch_size}")
+    print(f"{Fore.WHITE}  • Wait Between Batches: {Config.wait_between_batches}s")
+    print(f"{Fore.WHITE}  • Threshold: {Config.threshold}")
     print(f"{Fore.CYAN}{'='*60}\n")
     
     # Initialize variables
@@ -223,9 +260,14 @@ def SendInputParts(excel_path: str = None, prompt_path: str = None, verbose: boo
     print(f"  • Second Group: {second_group_count} items")
     print(f"  • Prompt: {len(prompt_text)} characters")
     print(f"  • Using Compact JSON: {Config.use_compact_json}")
+    print(f"  • Model: {Config.model}")
+    print(f"  • Temperature: {Config.temperature}")
+    print(f"  • Top P: {Config.top_p}")
+    print(f"  • Max Batch Size: {Config.max_batch_size}")
+    print(f"  • Wait Between Batches: {Config.wait_between_batches}s")
     
     try:
-        # NEW: Call Dispatcher instead of direct PerformMapping
+        # Call Dispatcher with user parameters from Config
         result = Dispatcher(
             first_group_list=first_group_list,
             second_group_list=second_group_list,
@@ -234,7 +276,9 @@ def SendInputParts(excel_path: str = None, prompt_path: str = None, verbose: boo
             prompt=prompt_text,
             n1=first_group_count,
             n2=second_group_count,
-            verbose=verbose
+            verbose=verbose,
+            max_batch_size=Config.max_batch_size,
+            wait_between_batches=Config.wait_between_batches
         )
         
         if result:
@@ -273,6 +317,19 @@ def SaveResults(results: Dict, output_path: str = None) -> bool:
     try:
         # Create a copy without dataframes for JSON
         json_results = {k: v for k, v in results.items() if k != "dataframes"}
+        
+        # Add configuration parameters used
+        json_results["parameters_used"] = {
+            "model": Config.model,
+            "temperature": Config.temperature,
+            "top_p": Config.top_p,
+            "max_tokens": Config.max_tokens,
+            "max_batch_size": Config.max_batch_size,
+            "wait_between_batches": Config.wait_between_batches,
+            "threshold": Config.threshold,
+            "use_compact_json": Config.use_compact_json,
+            "abbreviate_keys": Config.abbreviate_keys
+        }
         
         with open(json_output_path, 'w', encoding='utf-8') as f:
             json.dump(json_results, f, ensure_ascii=False, indent=2)

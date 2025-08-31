@@ -124,8 +124,8 @@ def Dispatcher(first_group_list: List[Dict],
                n1: int,
                n2: int,
                verbose: bool = True,
-               max_batch_size: int = 200,
-               wait_between_batches: int = 120) -> Optional[Dict]:
+               max_batch_size: int = None,
+               wait_between_batches: int = None) -> Optional[Dict]:
     """
     Dispatcher function that handles batching of large datasets.
     
@@ -138,15 +138,27 @@ def Dispatcher(first_group_list: List[Dict],
         n1: Number of rows in first group
         n2: Number of rows in second group
         verbose: Print detailed information
-        max_batch_size: Maximum rows per batch (default 200)
-        wait_between_batches: Seconds to wait between batches (default 120)
+        max_batch_size: Maximum rows per batch (uses Config if None)
+        wait_between_batches: Seconds to wait between batches (uses Config if None)
     
     Returns:
         Combined results from all batches
     """
     
+    # Use Config values if not provided
+    max_batch_size = max_batch_size or Config.max_batch_size
+    wait_between_batches = wait_between_batches or Config.wait_between_batches
+    
     print(f"\n{Fore.MAGENTA}{'='*60}")
     print(f"{Fore.MAGENTA}DISPATCHER: Batch Processing Handler")
+    print(f"{Fore.MAGENTA}Using Parameters:")
+    print(f"{Fore.WHITE}  • Model: {Config.model}")
+    print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+    print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
+    print(f"{Fore.WHITE}  • Max Tokens: {Config.max_tokens}")
+    print(f"{Fore.WHITE}  • Max Batch Size: {max_batch_size}")
+    print(f"{Fore.WHITE}  • Wait Between Batches: {wait_between_batches}s")
+    print(f"{Fore.WHITE}  • Threshold: {Config.threshold}")
     print(f"{Fore.MAGENTA}{'='*60}\n")
     
     # Check if batching is needed
@@ -223,6 +235,10 @@ def Dispatcher(first_group_list: List[Dict],
     for i, batch in enumerate(batch_plan['batches'], 1):
         print(f"\n{Fore.CYAN}{'='*50}")
         print(f"{Fore.CYAN}Processing Batch {i}/{batch_plan['total_batches']}")
+        print(f"{Fore.CYAN}Using Parameters:")
+        print(f"{Fore.WHITE}  • Model: {Config.model}")
+        print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+        print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
         print(f"{Fore.CYAN}{'='*50}")
         
         # Extract batch data (using 0-indexed for list slicing)
@@ -290,6 +306,12 @@ def Dispatcher(first_group_list: List[Dict],
     # Combine all results
     print(f"\n{Fore.CYAN}{'='*60}")
     print(f"{Fore.CYAN}Combining results from all batches...")
+    print(f"{Fore.CYAN}Parameters used throughout:")
+    print(f"{Fore.WHITE}  • Model: {Config.model}")
+    print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+    print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
+    print(f"{Fore.WHITE}  • Max Batch Size: {max_batch_size}")
+    print(f"{Fore.WHITE}  • Wait Between Batches: {wait_between_batches}s")
     print(f"{Fore.CYAN}{'='*60}")
     
     if not all_results:
@@ -297,7 +319,6 @@ def Dispatcher(first_group_list: List[Dict],
         return None
     
     # Return the last batch result (which contains accumulated DataFrames)
-    # The DataFrames accumulate across all batches automatically
     final_result = all_results[-1] if all_results else None
     
     if final_result:
@@ -306,5 +327,19 @@ def Dispatcher(first_group_list: List[Dict],
         print(f"\n{Fore.GREEN}✓ Batch processing completed")
         print(f"{Fore.WHITE}  • Total batches processed: {len(all_results)}/{batch_plan['total_batches']}")
         print(f"{Fore.WHITE}  • Total mappings: {total_mappings}")
+        
+        # Add batch processing metadata
+        final_result["batch_metadata"] = {
+            "total_batches": batch_plan['total_batches'],
+            "batches_processed": len(all_results),
+            "batch_plan": batch_plan,
+            "parameters_used": {
+                "model": Config.model,
+                "temperature": Config.temperature,
+                "top_p": Config.top_p,
+                "max_batch_size": max_batch_size,
+                "wait_between_batches": wait_between_batches
+            }
+        }
     
     return final_result

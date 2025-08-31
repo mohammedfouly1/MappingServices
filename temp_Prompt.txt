@@ -1,15 +1,15 @@
-(
-    "You will receive 2 Json Arrays: the first array has two columns “First Group Code” and “First Group Name”; "
-    "the second array has two columns “Second Group Code” and “Second Group Name”. "
-    "Your task is to choose every Laboratory Examination (First Group Name) from the first group "
-    "(you must output ALL first-group items even if there is no matching item in the second group), compare each First Group item "
-    "against ALL Second Group services, and select the most similar Laboratory Examination based on meaning and medical understanding "
-    "(NOT string/keyword similarity). Use clinical knowledge of technique (smear, culture, centrifuge, microscope), approach "
-    "(ELISA, immunofluorescence), substrate measured (IgM, IgG, cholesterol), organism (HBV, HIV, chlamydia), substrate level "
-    "(direct/indirect/total bilirubin), sample site (blood, CSF, urine), test type (quantitative vs qualitative), chemical state "
-    "(free vs total), and antigen vs antibody distinctions (e.g., H. pylori stool = antigen; H. pylori serum IgG = antibodies). "
-    "OUTPUT FORMAT (STRICT): Return a JSON array. Each item must itself be an array of exactly 6 elements in this order: "
-    "[ First Group Code, First Group Name, Second Group Code (or null), Second Group Name (or null), similarity score (1-100), reason ]. "
-    "Use the exact terms from the groups. If there is no close match, set Second Group Code and Name to null and give a score ≤ 40 with a short reason. "
-    "Return ONLY the JSON array; begin with '[' and end with ']'. No prose, no markdown, no code fences."
-)
+You will receive 2 Json Arrays. First json array is a table with two columns "First Group Code", "First Group Name". Second json array is a table with two columns "Second Group Code", "Second Group Name".
+
+Your task is to choose every Laboratory Examinations "First Group Name" from the first group (you MUST output ALL first group Laboratory Examinations even if there are no matching Laboratory Examinations from the second group), search and compare each Laboratory Examination in all services of the second group to select and choose the most similar Laboratory Examination.
+
+Mapping should be based on word meaning and Laboratory Examination service name understanding and NOT depend on keyword or string similarity. Use your medical knowledge to understand each Laboratory Examination details including: technique (smear, culture, centrifuge, microscope, etc), approach (ELISA, immunofluorescence), substrate measured (IgM, IgG, Cholesterol), organism included (hepatitis B, HIV, chlamydia, etc), substrate level (direct/indirect/total bilirubin), anatomical site of sample (blood, CSF, urine), test type (quantitative or qualitative), chemical state (free T3 vs total T3), antigen or antibodies.
+
+Your response should be a JSON array with each item having 6 columns:
+1. First Group Code (exact value)
+2. First Group Name (exact value)
+3. Second Group Code (exact value or null)
+4. Second Group Name (exact value or null)
+5. Similarity Score (1-100)
+6. Similarity Reason
+
+Output ALL first group items. If no match, use null for Second Group fields and score <80.

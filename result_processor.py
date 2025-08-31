@@ -1,464 +1,352 @@
 # result_processor.py
-import time
 import pandas as pd
-from typing import Any, Dict, List, Tuple, Optional
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 from colorama import Fore
+import json
 
 from config import Config
 
-# Global DataFrames for accumulating results
-api_call_df = pd.DataFrame()
-api_mapping_df = pd.DataFrame()
+# Global DataFrames
+df_api_call = pd.DataFrame(columns=[
+    'Timestamp', 'Model', 'Temperature', 'Top P', 'Max Batch Size', 
+    'Wait Time', 'Latency', 'Input Tokens', 'Output Tokens', 
+    'Total Tokens', 'Total Mappings', 'Mapped Count', 
+    'Unmapped Count', 'Avg Score'
+])
 
+df_api_mapping = pd.DataFrame(columns=[
+    'First Group Code', 'First Group Name', 'Second Group Code',
+    'Second Group Name', 'Similarity Score', 'Similarity Reason'
+])
 
-def deduplicate_mappings(incoming_mappings: List[Dict], existing_df: pd.DataFrame = None) -> List[Dict]:
-    """
-    Deduplicate mappings based on First Group Code, keeping highest similarity score.
-    
-    Args:
-        incoming_mappings: New mappings to add
-        existing_df: Existing DataFrame with previous mappings
-    
-    Returns:
-        List of deduplicated mappings maintaining original order
-    """
-    
-    # Initialize final list and index
-    if existing_df is not None and not existing_df.empty:
-        # Convert existing DataFrame to list of dicts
-        final = existing_df.to_dict('records')
-    else:
-        final = []
-    
-    # Build index map by First Group Code
-    byCode = {}
-    for idx, row in enumerate(final):
-        code = row.get("First Group Code")
-        if code:
-            byCode[code] = idx
-    
-    # Process incoming mappings
-    for row in incoming_mappings:
-        # Validate row has all required keys
-        required_keys = [
-            "First Group Code",
-            "First Group Name", 
-            "Second Group Code",
-            "Second Group Name",
-            "Similarity Score",  # Note: Our system uses this name
-            "Similarity Reason"  # Note: Our system uses this name
-        ]
-        
-        # Check if all keys exist (with some flexibility for naming)
-        if not all(k in row or k.replace("Similarity ", "similarity ") in row for k in required_keys[:2]):
-            continue  # Skip invalid row
-            
-        # Get similarity score
-        try:
-            score = int(row.get("Similarity Score", row.get("similarity score", 0)))
-        except (TypeError, ValueError):
-            continue  # Skip if score is not an integer
-        
-        # Apply score filter (> 50 for acceptance, but we'll use Config.threshold)
-        if score <= 50:  # Hard minimum threshold
-            continue
-        
-        # Get First Group Code
-        code = row.get("First Group Code", "")
-        if not code:
-            continue
-        
-        # Check if code already exists
-        if code not in byCode:
-            # Add new row
-            final.append(row)
-            byCode[code] = len(final) - 1
-        else:
-            # Compare scores
-            existing_idx = byCode[code]
-            existing_score = int(final[existing_idx].get("Similarity Score", 
-                                                         final[existing_idx].get("similarity score", 0)))
-            
-            if score > existing_score:
-                # Replace with higher score, maintain position
-                final[existing_idx] = row
-            # If score <= existing_score, do nothing (keep existing)
-    
-    return final
-
-
-def ProcessMappingResults(mappings: List[Dict], 
-                          response: Any, 
-                          elapsed_time: float,
-                          verbose: bool = True,
-                          reset_dataframes: bool = False,
-                          batch_info: Dict = None) -> Dict:
-    """
-    Process and format mapping results into structured DataFrames with deduplication.
-    
-    Args:
-        mappings: List of mapping results from API
-        response: Raw API response object
-        elapsed_time: Time taken for API call
-        verbose: If True, prints detailed information
-        reset_dataframes: If True, resets the global dataframes before processing
-        batch_info: Optional batch information for tracking
-    
-    Returns:
-        Dictionary containing both dataframes and current response data
-    """
-    
-    global api_call_df, api_mapping_df
-    
-    print(f"\n{Fore.YELLOW}Processing mapping results into DataFrames...")
-    
-    # Reset dataframes if requested
-    if reset_dataframes:
-        api_call_df = pd.DataFrame()
-        api_mapping_df = pd.DataFrame()
-        print(f"{Fore.GREEN}✓ DataFrames reset")
-    
-    # Generate timestamp for this API call
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Apply threshold filtering to mappings
-    threshold = Config.threshold
-    filtered_mappings = []
-    
-    for mapping in mappings:
-        # Ensure similarity score is an integer
-        try:
-            score = int(mapping.get("similarity score", 0))
-        except (TypeError, ValueError):
-            score = 0
-        
-        mapping["similarity score"] = score
-        
-        # Apply threshold - set to None if below threshold
-        if score < threshold:
-            mapping["Second Group Code"] = None
-            mapping["Second Group Name"] = None
-        
-        filtered_mappings.append(mapping)
-    
-    # Get token usage from response
-    usage = response.usage
-    
-    # ===== Create ApiCall DataFrame Entry =====
-    api_call_entry = {
-        "TimeStamp": timestamp,
-        "Model ID": Config.model,
-        "Latency Per seconds": round(elapsed_time, 3),
-        "Tokens Input": usage.prompt_tokens,
-        "Tokens OutPut": usage.completion_tokens,
-        "Temperature": Config.temperature,
-        "Top P": Config.top_p,
-        "Max tokens": Config.max_tokens
-    }
-    
-    # Add batch info if provided
-    if batch_info:
-        api_call_entry["Batch Number"] = batch_info.get("batch_number", "")
-        api_call_entry["Total Batches"] = batch_info.get("total_batches", "")
-    
-    # Append to ApiCall DataFrame
-    api_call_df = pd.concat([api_call_df, pd.DataFrame([api_call_entry])], ignore_index=True)
-    
-    # ===== Create ApiMapping DataFrame Entries with Deduplication =====
-    
-    # Prepare new mapping entries
-    new_mapping_entries = []
-    for mapping in filtered_mappings:
-        mapping_entry = {
-            "TimeStamp": timestamp,
-            "First Group Code": mapping.get("First Group Code", ""),
-            "First Group Name": mapping.get("First Group Name", ""),
-            "Second Group Code": mapping.get("Second Group Code", None),
-            "Second Group Name": mapping.get("Second Group Name", None),
-            "Similarity Score": mapping.get("similarity score", 0),
-            "Similarity Reason": mapping.get("reason for similarity score", "")
-        }
-        new_mapping_entries.append(mapping_entry)
-    
-    # Deduplicate against existing data
-    if not api_mapping_df.empty:
-        # Get existing data (without timestamp for deduplication)
-        existing_data = api_mapping_df.drop(columns=['TimeStamp'], errors='ignore')
-        
-        # Perform deduplication
-        deduplicated_entries = deduplicate_mappings(new_mapping_entries, existing_data)
-        
-        # Create new DataFrame with deduplicated data
-        if deduplicated_entries:
-            # Reset api_mapping_df with deduplicated data
-            api_mapping_df = pd.DataFrame(deduplicated_entries)
-            
-            # Count how many were replaced/added
-            original_count = len(existing_data)
-            new_count = len(api_mapping_df)
-            replaced_count = sum(1 for entry in new_mapping_entries 
-                               if any(entry.get("First Group Code") == row.get("First Group Code") 
-                                    for row in existing_data.to_dict('records')))
-            
-            if verbose:
-                print(f"{Fore.CYAN}Deduplication Summary:")
-                print(f"{Fore.WHITE}  • Previous mappings: {original_count}")
-                print(f"{Fore.WHITE}  • New mappings received: {len(new_mapping_entries)}")
-                print(f"{Fore.WHITE}  • Mappings after deduplication: {new_count}")
-                if replaced_count > 0:
-                    print(f"{Fore.WHITE}  • Mappings updated (higher score): {replaced_count}")
-    else:
-        # First batch - apply deduplication on new entries only
-        deduplicated_entries = deduplicate_mappings(new_mapping_entries, None)
-        
-        if deduplicated_entries:
-            api_mapping_df = pd.DataFrame(deduplicated_entries)
-            
-            if verbose and len(deduplicated_entries) < len(new_mapping_entries):
-                print(f"{Fore.CYAN}Initial Deduplication:")
-                print(f"{Fore.WHITE}  • Original mappings: {len(new_mapping_entries)}")
-                print(f"{Fore.WHITE}  • After deduplication: {len(deduplicated_entries)}")
-    
-    # Print DataFrame information if verbose
-    if verbose:
-        print(f"\n{Fore.CYAN}DataFrame Statistics:")
-        print(f"{Fore.WHITE}  • ApiCall DataFrame:")
-        print(f"    - Total API calls recorded: {len(api_call_df)}")
-        print(f"    - Latest call timestamp: {timestamp}")
-        print(f"    - Latest tokens used: {usage.total_tokens}")
-        
-        print(f"\n{Fore.WHITE}  • ApiMapping DataFrame:")
-        print(f"    - Total unique mappings: {len(api_mapping_df)}")
-        print(f"    - Mappings from this call: {len(new_mapping_entries)}")
-        
-        # Show score distribution
-        if not api_mapping_df.empty and 'Similarity Score' in api_mapping_df.columns:
-            score_stats = api_mapping_df['Similarity Score'].describe()
-            print(f"\n{Fore.CYAN}Similarity Score Statistics:")
-            print(f"{Fore.WHITE}    - Mean: {score_stats['mean']:.1f}")
-            print(f"{Fore.WHITE}    - Min: {score_stats['min']:.0f}")
-            print(f"{Fore.WHITE}    - Max: {score_stats['max']:.0f}")
-            print(f"{Fore.WHITE}    - Scores > 50: {(api_mapping_df['Similarity Score'] > 50).sum()}")
-            print(f"{Fore.WHITE}    - Scores > {Config.threshold}: {(api_mapping_df['Similarity Score'] > Config.threshold).sum()}")
-        
-        # Show sample of current API call entry
-        print(f"\n{Fore.CYAN}Current API Call Entry:")
-        for key, value in api_call_entry.items():
-            print(f"{Fore.WHITE}    {key}: {value}")
-        
-        # Show sample mappings
-        if deduplicated_entries:
-            print(f"\n{Fore.CYAN}Sample Unique Mappings (first 3):")
-            for i, entry in enumerate(deduplicated_entries[:3], 1):
-                print(f"\n{Fore.WHITE}  [{i}] Code: {entry['First Group Code']} | {entry['First Group Name']}")
-                if entry['Second Group Code']:
-                    print(f"      → {entry['Second Group Name']}")
-                    print(f"      Score: {entry['Similarity Score']}")
-                else:
-                    print(f"      → No match (score: {entry['Similarity Score']})")
-    
-    # Create result dictionary with DataFrames and current response data
-    result = {
-        "timestamp": timestamp,
-        "model": Config.model,
-        "latency_seconds": round(elapsed_time, 3),
-        "tokens": {
-            "input": usage.prompt_tokens,
-            "output": usage.completion_tokens,
-            "total": usage.total_tokens
-        },
-        "parameters": {
-            "temperature": Config.temperature,
-            "top_p": Config.top_p,
-            "max_tokens": Config.max_tokens,
-            "threshold": threshold,
-            "compact_mode": Config.use_compact_json
-        },
-        "mappings": filtered_mappings,  # Original mappings for this call
-        "deduplicated_mappings": deduplicated_entries,  # Deduplicated across all calls
-        "dataframes": {
-            "api_call": api_call_df,
-            "api_mapping": api_mapping_df
-        }
-    }
-    
-    return result
-
-
-def get_dataframes() -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Get the current state of both DataFrames.
-    
-    Returns:
-        Tuple of (api_call_df, api_mapping_df)
-    """
-    global api_call_df, api_mapping_df
-    return api_call_df.copy(), api_mapping_df.copy()
-
-
-def save_dataframes_to_excel(output_path: str = None) -> bool:
-    """
-    Save both DataFrames to an Excel file with separate sheets.
-    
-    Args:
-        output_path: Path for output Excel file (uses default if None)
-    
-    Returns:
-        True if saved successfully, False otherwise
-    """
-    global api_call_df, api_mapping_df
-    
-    if not output_path:
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        output_path = f"mapping_results_{timestamp}.xlsx"
-    
-    try:
-        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-            # Save ApiCall DataFrame
-            if not api_call_df.empty:
-                api_call_df.to_excel(writer, sheet_name='ApiCall', index=False)
-                print(f"{Fore.GREEN}✓ ApiCall DataFrame saved ({len(api_call_df)} records)")
-            
-            # Save ApiMapping DataFrame (deduplicated)
-            if not api_mapping_df.empty:
-                api_mapping_df.to_excel(writer, sheet_name='ApiMapping', index=False)
-                print(f"{Fore.GREEN}✓ ApiMapping DataFrame saved ({len(api_mapping_df)} unique mappings)")
-                
-                # Show deduplication stats
-                unique_codes = api_mapping_df['First Group Code'].nunique()
-                total_rows = len(api_mapping_df)
-                if unique_codes == total_rows:
-                    print(f"{Fore.WHITE}  • All mappings are unique by First Group Code")
-                else:
-                    print(f"{Fore.YELLOW}  • Warning: {total_rows - unique_codes} duplicate First Group Codes found")
-        
-        print(f"{Fore.GREEN}✓ DataFrames saved to: {output_path}")
-        return True
-        
-    except Exception as e:
-        print(f"{Fore.RED}✗ Error saving DataFrames: {str(e)}")
-        return False
-
-
-def save_dataframes_to_csv(output_prefix: str = None) -> bool:
-    """
-    Save both DataFrames to separate CSV files.
-    
-    Args:
-        output_prefix: Prefix for output CSV files (uses default if None)
-    
-    Returns:
-        True if saved successfully, False otherwise
-    """
-    global api_call_df, api_mapping_df
-    
-    if not output_prefix:
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        output_prefix = f"mapping_results_{timestamp}"
-    
-    try:
-        # Save ApiCall DataFrame
-        if not api_call_df.empty:
-            api_call_path = f"{output_prefix}_apicall.csv"
-            api_call_df.to_csv(api_call_path, index=False, encoding='utf-8-sig')
-            print(f"{Fore.GREEN}✓ ApiCall DataFrame saved to: {api_call_path}")
-        
-        # Save ApiMapping DataFrame
-        if not api_mapping_df.empty:
-            api_mapping_path = f"{output_prefix}_apimapping.csv"
-            api_mapping_df.to_csv(api_mapping_path, index=False, encoding='utf-8-sig')
-            print(f"{Fore.GREEN}✓ ApiMapping DataFrame saved to: {api_mapping_path}")
-            print(f"{Fore.WHITE}  • Total unique mappings: {len(api_mapping_df)}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"{Fore.RED}✗ Error saving DataFrames to CSV: {str(e)}")
-        return False
-
-
-def display_dataframe_summary():
-    """
-    Display a summary of the current DataFrames with deduplication info.
-    """
-    global api_call_df, api_mapping_df
-    
-    print(f"\n{Fore.CYAN}{'='*60}")
-    print(f"{Fore.CYAN}DataFrame Summary")
-    print(f"{Fore.CYAN}{'='*60}")
-    
-    # ApiCall DataFrame Summary
-    print(f"\n{Fore.YELLOW}ApiCall DataFrame:")
-    if not api_call_df.empty:
-        print(f"{Fore.WHITE}  • Total API calls: {len(api_call_df)}")
-        print(f"{Fore.WHITE}  • Total tokens used: {api_call_df['Tokens Input'].sum() + api_call_df['Tokens OutPut'].sum()}")
-        print(f"{Fore.WHITE}  • Average latency: {api_call_df['Latency Per seconds'].mean():.2f} seconds")
-        print(f"\n{Fore.CYAN}  Last 3 API calls:")
-        print(api_call_df.tail(3).to_string(index=False))
-    else:
-        print(f"{Fore.WHITE}  No API calls recorded yet")
-    
-    # ApiMapping DataFrame Summary
-    print(f"\n{Fore.YELLOW}ApiMapping DataFrame (Deduplicated):")
-    if not api_mapping_df.empty:
-        print(f"{Fore.WHITE}  • Total unique mappings: {len(api_mapping_df)}")
-        print(f"{Fore.WHITE}  • Unique First Group Codes: {api_mapping_df['First Group Code'].nunique()}")
-        
-        # Check for any remaining duplicates (shouldn't be any)
-        duplicates = api_mapping_df.duplicated(subset=['First Group Code'], keep=False).sum()
-        if duplicates > 0:
-            print(f"{Fore.YELLOW}  • Warning: {duplicates} duplicate First Group Codes found")
-        else:
-            print(f"{Fore.GREEN}  • All First Group Codes are unique ✓")
-        
-        print(f"{Fore.WHITE}  • Average similarity score: {api_mapping_df['Similarity Score'].mean():.2f}")
-        print(f"{Fore.WHITE}  • Matched items (non-null Second Group): {api_mapping_df['Second Group Code'].notna().sum()}")
-        print(f"{Fore.WHITE}  • Score distribution:")
-        print(f"    - Scores > 50: {(api_mapping_df['Similarity Score'] > 50).sum()}")
-        print(f"    - Scores > {Config.threshold}: {(api_mapping_df['Similarity Score'] > Config.threshold).sum()}")
-        print(f"    - Scores = 100: {(api_mapping_df['Similarity Score'] == 100).sum()}")
-        
-        print(f"\n{Fore.CYAN}  Top 5 mappings by score:")
-        display_cols = ['First Group Code', 'First Group Name', 'Second Group Name', 'Similarity Score']
-        top_mappings = api_mapping_df.nlargest(5, 'Similarity Score')[display_cols]
-        print(top_mappings.to_string(index=False))
-    else:
-        print(f"{Fore.WHITE}  No mappings recorded yet")
+# Dictionary to track seen First Group Codes and their best scores
+seen_first_codes = {}
 
 
 def reset_dataframes():
-    """Reset global DataFrames"""
-    global api_call_df, api_mapping_df
-    api_call_df = pd.DataFrame()
-    api_mapping_df = pd.DataFrame()
-    print(f"{Fore.GREEN}✓ DataFrames reset")
+    """Reset the global DataFrames and tracking dictionary"""
+    global df_api_call, df_api_mapping, seen_first_codes
+    
+    df_api_call = pd.DataFrame(columns=[
+        'Timestamp', 'Model', 'Temperature', 'Top P', 'Max Batch Size', 
+        'Wait Time', 'Latency', 'Input Tokens', 'Output Tokens', 
+        'Total Tokens', 'Total Mappings', 'Mapped Count', 
+        'Unmapped Count', 'Avg Score'
+    ])
+    
+    df_api_mapping = pd.DataFrame(columns=[
+        'First Group Code', 'First Group Name', 'Second Group Code',
+        'Second Group Name', 'Similarity Score', 'Similarity Reason'
+    ])
+    
+    seen_first_codes = {}
+    
+    print(f"{Fore.CYAN}DataFrames and tracking dictionary reset")
 
 
-def get_mapping_stats() -> Dict:
+def get_dataframes():
+    """Return the current state of DataFrames"""
+    global df_api_call, df_api_mapping
+    return {
+        'ApiCall': df_api_call.copy(),
+        'ApiMapping': df_api_mapping.copy()
+    }
+
+
+def ProcessMappingResults(mappings: List[Dict], 
+                         response: Any, 
+                         elapsed_time: float, 
+                         verbose: bool = True,
+                         reset_dataframes: bool = True) -> Optional[Dict]:
     """
-    Get statistics about the current mapping DataFrame.
+    Process mapping results with deduplication and DataFrame creation.
+    Tracks the parameters used for this API call.
+    
+    Args:
+        mappings: List of mapping dictionaries
+        response: OpenAI API response object
+        elapsed_time: Time taken for API call
+        verbose: If True, prints detailed information
+        reset_dataframes: If True, resets DataFrames before processing
     
     Returns:
-        Dictionary with mapping statistics
+        Dictionary with processed results and dataframes
     """
-    global api_mapping_df
     
-    if api_mapping_df.empty:
-        return {
-            "total_mappings": 0,
-            "unique_first_codes": 0,
-            "matched_items": 0,
-            "avg_score": 0
-        }
+    global df_api_call, df_api_mapping, seen_first_codes
     
+    print(f"\n{Fore.MAGENTA}{'='*60}")
+    print(f"{Fore.MAGENTA}Processing Mapping Results with Deduplication")
+    print(f"{Fore.MAGENTA}Using Parameters:")
+    print(f"{Fore.WHITE}  • Model: {Config.model}")
+    print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+    print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
+    print(f"{Fore.WHITE}  • Threshold: {Config.threshold}")
+    print(f"{Fore.MAGENTA}{'='*60}\n")
+    
+    # Reset if requested (for first batch)
+    if reset_dataframes:
+        reset_dataframes()
+    
+    if not mappings:
+        print(f"{Fore.RED}✗ No mappings to process")
+        return None
+    
+    # Extract token usage from response
+    try:
+        input_tokens = response.usage.prompt_tokens
+        output_tokens = response.usage.completion_tokens
+        total_tokens = response.usage.total_tokens
+    except:
+        input_tokens = output_tokens = total_tokens = 0
+    
+    # Process mappings with deduplication
+    new_mappings = []
+    updated_mappings = 0
+    duplicate_count = 0
+    
+    for mapping in mappings:
+        first_code = mapping.get("First Group Code", "")
+        first_name = mapping.get("First Group Name", "")
+        second_code = mapping.get("Second Group Code")
+        second_name = mapping.get("Second Group Name")
+        score = mapping.get("similarity score", 0)
+        reason = mapping.get("reason for similarity score", "")
+        
+        # Check if we've seen this First Group Code before
+        if first_code in seen_first_codes:
+            # Compare scores
+            existing_score = seen_first_codes[first_code]['score']
+            if score > existing_score:
+                # Update with better score
+                seen_first_codes[first_code] = {
+                    'score': score,
+                    'index': seen_first_codes[first_code]['index']  # Keep original index
+                }
+                
+                # Update the DataFrame row
+                idx = seen_first_codes[first_code]['index']
+                df_api_mapping.loc[idx] = [
+                    first_code, first_name, second_code, 
+                    second_name, score, reason
+                ]
+                updated_mappings += 1
+                
+                if verbose:
+                    print(f"{Fore.YELLOW}↑ Updated: {first_code} - Score improved from {existing_score} to {score}")
+            else:
+                duplicate_count += 1
+                if verbose:
+                    print(f"{Fore.BLUE}⊡ Duplicate: {first_code} - Keeping existing score {existing_score} (new: {score})")
+        else:
+            # New mapping - add it
+            new_row = pd.DataFrame([{
+                'First Group Code': first_code,
+                'First Group Name': first_name,
+                'Second Group Code': second_code,
+                'Second Group Name': second_name,
+                'Similarity Score': score,
+                'Similarity Reason': reason
+            }])
+            
+            # Get the index where this will be added
+            new_index = len(df_api_mapping)
+            df_api_mapping = pd.concat([df_api_mapping, new_row], ignore_index=True)
+            
+            # Track this First Group Code
+            seen_first_codes[first_code] = {
+                'score': score,
+                'index': new_index
+            }
+            
+            new_mappings.append(mapping)
+            
+            if verbose and len(new_mappings) <= 3:
+                print(f"{Fore.GREEN}✓ New: {first_code} → {second_code} (Score: {score})")
+    
+    # Calculate statistics
+    total_mappings = len(mappings)
+    unique_mappings = len(seen_first_codes)
+    mapped_count = sum(1 for _, data in seen_first_codes.items() 
+                      if df_api_mapping.loc[data['index'], 'Second Group Code'] is not None 
+                      and pd.notna(df_api_mapping.loc[data['index'], 'Second Group Code']))
+    unmapped_count = unique_mappings - mapped_count
+    
+    # Calculate average score for non-null mappings
+    valid_scores = df_api_mapping[df_api_mapping['Similarity Score'] > 0]['Similarity Score']
+    avg_score = valid_scores.mean() if not valid_scores.empty else 0
+    
+    # Filter by threshold
+    above_threshold = df_api_mapping[df_api_mapping['Similarity Score'] >= Config.threshold]
+    below_threshold = df_api_mapping[df_api_mapping['Similarity Score'] < Config.threshold]
+    
+    # Add to API call DataFrame with parameters
+    api_call_data = pd.DataFrame([{
+        'Timestamp': datetime.now(),
+        'Model': Config.model,
+        'Temperature': Config.temperature,
+        'Top P': Config.top_p,
+        'Max Batch Size': Config.max_batch_size,
+        'Wait Time': Config.wait_between_batches,
+        'Latency': elapsed_time,
+        'Input Tokens': input_tokens,
+        'Output Tokens': output_tokens,
+        'Total Tokens': total_tokens,
+        'Total Mappings': total_mappings,
+        'Mapped Count': mapped_count,
+        'Unmapped Count': unmapped_count,
+        'Avg Score': avg_score
+    }])
+    
+    df_api_call = pd.concat([df_api_call, api_call_data], ignore_index=True)
+    
+    # Print summary
+    print(f"\n{Fore.CYAN}Deduplication Summary:")
+    print(f"{Fore.WHITE}  • Total mappings received: {total_mappings}")
+    print(f"{Fore.WHITE}  • New mappings added: {len(new_mappings)}")
+    print(f"{Fore.WHITE}  • Mappings updated (better score): {updated_mappings}")
+    print(f"{Fore.WHITE}  • Duplicates ignored: {duplicate_count}")
+    print(f"{Fore.WHITE}  • Total unique mappings: {unique_mappings}")
+    
+    print(f"\n{Fore.CYAN}Mapping Statistics:")
+    print(f"{Fore.WHITE}  • Mapped items: {mapped_count}")
+    print(f"{Fore.WHITE}  • Unmapped items: {unmapped_count}")
+    print(f"{Fore.WHITE}  • Average similarity score: {avg_score:.2f}")
+    print(f"{Fore.WHITE}  • Above threshold ({Config.threshold}): {len(above_threshold)}")
+    print(f"{Fore.WHITE}  • Below threshold: {len(below_threshold)}")
+    
+    print(f"\n{Fore.CYAN}Token Usage:")
+    print(f"{Fore.WHITE}  • Input tokens: {input_tokens:,}")
+    print(f"{Fore.WHITE}  • Output tokens: {output_tokens:,}")
+    print(f"{Fore.WHITE}  • Total tokens: {total_tokens:,}")
+    
+    print(f"\n{Fore.CYAN}Parameters Used:")
+    print(f"{Fore.WHITE}  • Model: {Config.model}")
+    print(f"{Fore.WHITE}  • Temperature: {Config.temperature}")
+    print(f"{Fore.WHITE}  • Top P: {Config.top_p}")
+    print(f"{Fore.WHITE}  • Max Batch Size: {Config.max_batch_size}")
+    print(f"{Fore.WHITE}  • Wait Between Batches: {Config.wait_between_batches}s")
+    
+    # Return results
     return {
-        "total_mappings": len(api_mapping_df),
-        "unique_first_codes": api_mapping_df['First Group Code'].nunique(),
-        "matched_items": api_mapping_df['Second Group Code'].notna().sum(),
-        "avg_score": api_mapping_df['Similarity Score'].mean(),
-        "score_distribution": {
-            "above_50": (api_mapping_df['Similarity Score'] > 50).sum(),
-            "above_threshold": (api_mapping_df['Similarity Score'] > Config.threshold).sum(),
-            "perfect_100": (api_mapping_df['Similarity Score'] == 100).sum()
-        }
+        "mappings": list(df_api_mapping.to_dict('records')),
+        "statistics": {
+            "total_mappings": total_mappings,
+            "unique_mappings": unique_mappings,
+            "new_mappings": len(new_mappings),
+            "updated_mappings": updated_mappings,
+            "duplicate_count": duplicate_count,
+            "mapped_count": mapped_count,
+            "unmapped_count": unmapped_count,
+            "avg_score": avg_score,
+            "above_threshold": len(above_threshold),
+            "below_threshold": len(below_threshold)
+        },
+        "token_usage": {
+            "input": input_tokens,
+            "output": output_tokens,
+            "total": total_tokens
+        },
+        "parameters_used": {
+            "model": Config.model,
+            "temperature": Config.temperature,
+            "top_p": Config.top_p,
+            "max_batch_size": Config.max_batch_size,
+            "wait_between_batches": Config.wait_between_batches,
+            "threshold": Config.threshold
+        },
+        "dataframes": get_dataframes()
     }
+
+
+def display_dataframe_summary():
+    """Display summary of the DataFrames"""
+    global df_api_call, df_api_mapping
+    
+    print(f"\n{Fore.MAGENTA}{'='*60}")
+    print(f"{Fore.MAGENTA}DataFrame Summary")
+    print(f"{Fore.MAGENTA}{'='*60}\n")
+    
+    print(f"{Fore.CYAN}API Call DataFrame:")
+    print(f"{Fore.WHITE}  • Shape: {df_api_call.shape}")
+    print(f"{Fore.WHITE}  • Columns: {list(df_api_call.columns)}")
+    if not df_api_call.empty:
+        print(f"\n{Fore.CYAN}Last API Call:")
+        last_call = df_api_call.iloc[-1]
+        print(f"{Fore.WHITE}  • Model: {last_call['Model']}")
+        print(f"{Fore.WHITE}  • Temperature: {last_call['Temperature']}")
+        print(f"{Fore.WHITE}  • Top P: {last_call['Top P']}")
+        print(f"{Fore.WHITE}  • Latency: {last_call['Latency']:.2f}s")
+        print(f"{Fore.WHITE}  • Total Tokens: {last_call['Total Tokens']:,}")
+    
+    print(f"\n{Fore.CYAN}API Mapping DataFrame:")
+    print(f"{Fore.WHITE}  • Shape: {df_api_mapping.shape}")
+    print(f"{Fore.WHITE}  • Unique First Group Codes: {df_api_mapping['First Group Code'].nunique()}")
+    if not df_api_mapping.empty:
+        print(f"{Fore.WHITE}  • Average Score: {df_api_mapping['Similarity Score'].mean():.2f}")
+        print(f"{Fore.WHITE}  • Mapped: {df_api_mapping['Second Group Code'].notna().sum()}")
+        print(f"{Fore.WHITE}  • Unmapped: {df_api_mapping['Second Group Code'].isna().sum()}")
+
+
+def save_dataframes_to_excel(filepath: str):
+    """Save DataFrames to Excel file with parameters tracked"""
+    global df_api_call, df_api_mapping
+    
+    try:
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+            # Save API Call data
+            df_api_call.to_excel(writer, sheet_name='API_Calls', index=False)
+            
+            # Save Mapping data
+            df_api_mapping.to_excel(writer, sheet_name='Mappings', index=False)
+            
+            # Create parameters sheet
+            params_df = pd.DataFrame([
+                ['Model', Config.model],
+                ['Temperature', Config.temperature],
+                ['Top P', Config.top_p],
+                ['Max Tokens', Config.max_tokens],
+                ['Max Batch Size', Config.max_batch_size],
+                ['Wait Between Batches', f"{Config.wait_between_batches}s"],
+                ['Threshold', Config.threshold],
+                ['Use Compact JSON', Config.use_compact_json],
+                ['Abbreviate Keys', Config.abbreviate_keys]
+            ], columns=['Parameter', 'Value'])
+            params_df.to_excel(writer, sheet_name='Parameters', index=False)
+            
+            # Create summary sheet
+            summary_data = {
+                'Metric': [
+                    'Total API Calls',
+                    'Total Unique Mappings',
+                    'Mapped Items',
+                    'Unmapped Items',
+                    'Average Similarity Score',
+                    'Total Input Tokens',
+                    'Total Output Tokens',
+                    'Total Tokens Used',
+                    'Average Latency'
+                ],
+                'Value': [
+                    len(df_api_call),
+                    len(df_api_mapping),
+                    df_api_mapping['Second Group Code'].notna().sum(),
+                    df_api_mapping['Second Group Code'].isna().sum(),
+                    df_api_mapping['Similarity Score'].mean() if not df_api_mapping.empty else 0,
+                    df_api_call['Input Tokens'].sum() if not df_api_call.empty else 0,
+                    df_api_call['Output Tokens'].sum() if not df_api_call.empty else 0,
+                    df_api_call['Total Tokens'].sum() if not df_api_call.empty else 0,
+                    df_api_call['Latency'].mean() if not df_api_call.empty else 0
+                ]
+            }
+            summary_df = pd.DataFrame(summary_data)
+            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+        
+        print(f"{Fore.GREEN}✓ DataFrames saved to: {filepath}")
+        print(f"{Fore.WHITE}  • Sheets: API_Calls, Mappings, Parameters, Summary")
+        return True
+        
+    except Exception as e:
+        print(f"{Fore.RED}✗ Error saving to Excel: {str(e)}")
+        return False
