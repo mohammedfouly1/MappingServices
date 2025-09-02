@@ -286,7 +286,7 @@ def Dispatcher(first_group_list: List[Dict],
             response=api_result["response"],
             elapsed_time=api_result["elapsed_time"],
             verbose=False,
-            reset_dataframes=False  # Don't reset, accumulate results
+            reset_before_processing=False  # Don't reset, accumulate results
         )
         
         if batch_result:

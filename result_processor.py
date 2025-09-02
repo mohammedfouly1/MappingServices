@@ -58,7 +58,7 @@ def ProcessMappingResults(mappings: List[Dict],
                          response: Any, 
                          elapsed_time: float, 
                          verbose: bool = True,
-                         reset_dataframes: bool = True) -> Optional[Dict]:
+                         reset_before_processing: bool = True) -> Optional[Dict]:
     """
     Process mapping results with deduplication and DataFrame creation.
     Tracks the parameters used for this API call.
@@ -86,7 +86,7 @@ def ProcessMappingResults(mappings: List[Dict],
     print(f"{Fore.MAGENTA}{'='*60}\n")
     
     # Reset if requested (for first batch)
-    if reset_dataframes:
+    if reset_before_processing:
         reset_dataframes()
     
     if not mappings:

@@ -1,26 +1,22 @@
-# streamlit_app.py - Complete updated version with all fixes
+# streamlit_app.py
 import streamlit as st
 import pandas as pd
-import json
-import time
-import sys
 import io
-from pathlib import Path
-import traceback
+import sys
+import time
+import json
+import base64
 from datetime import datetime
+from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Import your modules
+# Import our modules
 from config import Config
-from input_handler import SendInputParts, SaveResults
-from result_processor import display_dataframe_summary, reset_dataframes, get_dataframes
-from colorama import Fore, init
+from input_handler import SendInputParts
+from result_processor import get_dataframes, reset_dataframes, save_dataframes_to_excel
 
-# Initialize colorama
-init(autoreset=True)
-
-# Page configuration
+# Set page config
 st.set_page_config(
     page_title="Laboratory Mapping Service",
     page_icon="🔬",
@@ -31,242 +27,257 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
-    .stApp {
-        max-width: 100%;
+    .stButton>button {
+        width: 100%;
+        height: 50px;
+        font-size: 18px;
     }
-    .console-output {
-        background-color: #0e1117;
+    .success-box {
         padding: 10px;
         border-radius: 5px;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        max-height: 400px;
-        overflow-y: auto;
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    .error-box {
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    .info-box {
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+    }
+    pre {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
-if 'processing' not in st.session_state:
-    st.session_state.processing = False
-if 'results' not in st.session_state:
-    st.session_state.results = None
-if 'console_output' not in st.session_state:
-    st.session_state.console_output = []
-if 'dataframes' not in st.session_state:
-    st.session_state.dataframes = None
-if 'user_params' not in st.session_state:
-    st.session_state.user_params = {}
-if 'excel_file' not in st.session_state:
-    st.session_state.excel_file = None
-if 'prompt_text' not in st.session_state:
-    st.session_state.prompt_text = ""
-
 class StreamlitConsoleCapture:
     """Capture console output for Streamlit display"""
-    def __init__(self, console_placeholder):
-        self.console_placeholder = console_placeholder
-        self.output_buffer = []
+    def __init__(self, text_element):
+        self.text_element = text_element
+        self.output = []
+        self.old_stdout = sys.stdout
         
     def write(self, text):
-        if text and text != '\n':
-            # Strip ANSI color codes for web display
-            import re
-            clean_text = re.sub(r'\x1b\[[0-9;]*m', '', text)
-            self.output_buffer.append(clean_text)
-            # Update console in real-time
-            self.console_placeholder.markdown(
-                f'<div class="console-output">{"".join(self.output_buffer[-100:])}</div>',
-                unsafe_allow_html=True
-            )
-        sys.__stdout__.write(text)
+        # Write to original stdout
+        self.old_stdout.write(text)
+        
+        # Remove ANSI color codes for display
+        import re
+        clean_text = re.sub(r'\x1b\[[0-9;]*m', '', text)
+        
+        # Capture for Streamlit
+        if clean_text.strip():
+            self.output.append(clean_text)
+            # Update the text element with last 50 lines
+            self.text_element.text('\n'.join(self.output[-50:]))
     
     def flush(self):
-        pass
+        self.old_stdout.flush()
 
-def fix_dataframe_types(df):
-    """Fix mixed data types in DataFrame columns for Streamlit display"""
-    df_fixed = df.copy()
-    for col in df_fixed.columns:
-        # Convert mixed types to string for display
-        try:
-            df_fixed[col] = df_fixed[col].astype(str)
-            # Replace 'nan' strings with empty strings for better display
-            df_fixed[col] = df_fixed[col].replace('nan', '')
-            df_fixed[col] = df_fixed[col].replace('None', '')
-        except:
-            pass
-    return df_fixed
+def load_prompt_from_file(prompt_type):
+    """Load prompt text from the appropriate file based on type"""
+    prompt_files = {
+        "Lab": "LabPrompt.txt",
+        "Radiology": "RadPrompt.txt",
+        "Service": "ServicePrompt.txt"
+    }
+    
+    prompt_file = prompt_files.get(prompt_type)
+    if not prompt_file:
+        return None
+    
+    try:
+        # Check if file exists
+        file_path = Path(prompt_file)
+        if not file_path.exists():
+            st.error(f"❌ Prompt file '{prompt_file}' not found! Please ensure the file exists in the project folder.")
+            return None
+            
+        # Read the file
+        with open(file_path, 'r', encoding='utf-8-sig') as f:
+            prompt_text = f.read().strip()
+            
+        if not prompt_text:
+            st.warning(f"⚠️ Prompt file '{prompt_file}' is empty!")
+            return None
+            
+        return prompt_text
+        
+    except Exception as e:
+        st.error(f"❌ Error reading prompt file '{prompt_file}': {str(e)}")
+        return None
 
 def main():
     # Header
     st.title("🔬 Laboratory Mapping Service")
-    st.markdown("### AI-Powered Laboratory Test Mapping System")
+    st.markdown("### AI-Powered Mapping System with Batch Processing")
     
-    # Sidebar for configuration
+    # Initialize session state
+    if 'processing' not in st.session_state:
+        st.session_state.processing = False
+    if 'results' not in st.session_state:
+        st.session_state.results = None
+    if 'console_output' not in st.session_state:
+        st.session_state.console_output = []
+    if 'selected_prompt_type' not in st.session_state:
+        st.session_state.selected_prompt_type = None
+    
+    # Sidebar Configuration
     with st.sidebar:
         st.header("⚙️ Configuration")
-        
-        # API Configuration
-        st.subheader("🔑 API Settings")
         
         # API Key input
         api_key = st.text_input(
             "OpenAI API Key",
             type="password",
-            value=st.session_state.get('api_key', Config.api_key),
+            value=Config.api_key,
             help="Enter your OpenAI API key"
         )
+        if api_key:
+            Config.api_key = api_key
         
-        # Model selection
+        st.divider()
+        
+        # Model Settings
+        st.subheader("🤖 Model Settings")
+        
         model = st.selectbox(
             "Model",
-            ["gpt-4o", "gpt-4", "gpt-4-turbo-preview", "gpt-3.5-turbo"],
+            ["gpt-4o-mini", "gpt-4o", "gpt-4", "gpt-3.5-turbo"],
             index=0,
             help="Select the OpenAI model to use"
         )
+        Config.model = model
         
-        # Advanced Settings (Collapsible)
-        with st.expander("🎛️ Advanced Parameters", expanded=True):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                temperature = st.slider(
-                    "Temperature",
-                    min_value=0.0,
-                    max_value=2.0,
-                    value=0.2,
-                    step=0.1,
-                    help="Controls randomness in responses (0=deterministic, 2=very random)"
-                )
-                
-                top_p = st.slider(
-                    "Top P",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=0.9,
-                    step=0.1,
-                    help="Nucleus sampling parameter (alternative to temperature)"
-                )
-                
-                max_tokens = st.number_input(
-                    "Max Tokens",
-                    min_value=100,
-                    max_value=32000,
-                    value=16000,
-                    step=1000,
-                    help="Maximum tokens in response"
-                )
-            
-            with col2:
-                max_batch_size = st.number_input(
-                    "Max Batch Size",
-                    min_value=10,
-                    max_value=500,
-                    value=200,
-                    step=10,
-                    help="Maximum rows per batch"
-                )
-                
-                wait_between_batches = st.number_input(
-                    "Wait Between Batches (seconds)",
-                    min_value=0,
-                    max_value=300,
-                    value=120,
-                    step=10,
-                    help="Seconds to wait between API calls"
-                )
-                
-                threshold = st.slider(
-                    "Similarity Threshold",
-                    min_value=0,
-                    max_value=100,
-                    value=80,
-                    step=5,
-                    help="Minimum similarity score to consider a match"
-                )
+        temperature = st.slider(
+            "Temperature",
+            min_value=0.0,
+            max_value=1.0,
+            value=Config.temperature,
+            step=0.1,
+            help="Controls randomness (0=focused, 1=creative)"
+        )
+        Config.temperature = temperature
+        
+        top_p = st.slider(
+            "Top P",
+            min_value=0.1,
+            max_value=1.0,
+            value=Config.top_p,
+            step=0.1,
+            help="Controls diversity of output"
+        )
+        Config.top_p = top_p
+        
+        max_tokens = st.number_input(
+            "Max Tokens",
+            min_value=1000,
+            max_value=32000,
+            value=Config.max_tokens,
+            step=1000,
+            help="Maximum tokens for response"
+        )
+        Config.max_tokens = max_tokens
+        
+        threshold = st.slider(
+            "Similarity Threshold",
+            min_value=0,
+            max_value=100,
+            value=Config.threshold,
+            step=5,
+            help="Minimum similarity score for valid mapping"
+        )
+        Config.threshold = threshold
+        
+        st.divider()
+        
+        # Batch Settings
+        st.subheader("📦 Batch Settings")
+        
+        max_batch_size = st.number_input(
+            "Max Batch Size",
+            min_value=50,
+            max_value=500,
+            value=Config.max_batch_size,
+            step=50,
+            help="Maximum rows per batch"
+        )
+        Config.max_batch_size = max_batch_size
+        
+        wait_time = st.number_input(
+            "Wait Between Batches (seconds)",
+            min_value=0,
+            max_value=300,
+            value=Config.wait_between_batches,
+            step=30,
+            help="Delay between API calls"
+        )
+        Config.wait_between_batches = wait_time
+        
+        st.divider()
         
         # Optimization Settings
-        with st.expander("⚡ Optimization Settings"):
-            use_compact_json = st.checkbox(
-                "Use Compact JSON",
-                value=True,
-                help="Reduce token usage with compact format"
-            )
-            
-            abbreviate_keys = st.checkbox(
-                "Abbreviate Keys",
-                value=True,
-                help="Use abbreviated keys (c/n instead of code/name)"
-            )
+        st.subheader("⚡ Optimization")
         
-        # Store parameters in session state
-        st.session_state.user_params = {
-            'api_key': api_key,
-            'model': model,
-            'temperature': temperature,
-            'top_p': top_p,
-            'max_tokens': max_tokens,
-            'max_batch_size': max_batch_size,
-            'wait_between_batches': wait_between_batches,
-            'threshold': threshold,
-            'use_compact_json': use_compact_json,
-            'abbreviate_keys': abbreviate_keys
-        }
+        use_compact = st.checkbox(
+            "Use Compact JSON",
+            value=Config.use_compact_json,
+            help="Reduces token usage by ~60%"
+        )
+        Config.use_compact_json = use_compact
         
-        # Display current settings
-        st.divider()
-        st.subheader("📊 Current Settings")
-        settings_data = [
-            ["Model", model],
-            ["Temperature", f"{temperature:.1f}"],
-            ["Top P", f"{top_p:.1f}"],
-            ["Max Batch Size", str(max_batch_size)],
-            ["Wait Between Batches", f"{wait_between_batches}s"],
-            ["Threshold", f"{threshold}%"]
-        ]
-        settings_df = pd.DataFrame(settings_data, columns=["Parameter", "Value"])
-        # Fix data types for display
-        settings_df = fix_dataframe_types(settings_df)
-        st.dataframe(settings_df, hide_index=True, use_container_width=True)
+        abbreviate = st.checkbox(
+            "Abbreviate Keys",
+            value=Config.abbreviate_keys,
+            help="Use short key names (c/n instead of code/name)"
+        )
+        Config.abbreviate_keys = abbreviate
     
     # Main content area
-    tabs = st.tabs(["📁 Data Input", "🔄 Processing", "📊 Results", "📈 Analytics"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📁 Input", "🔄 Processing", "📊 Results", "📈 Analytics"])
     
-    with tabs[0]:
+    with tab1:
         st.header("Data Input")
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.subheader("📄 Excel File")
-            excel_file = st.file_uploader(
+            uploaded_file = st.file_uploader(
                 "Upload Excel file with 'First Group' and 'Second Group' sheets",
                 type=['xlsx', 'xls'],
-                help="Excel file should contain two sheets: 'First Group' and 'Second Group'"
+                help="Excel file must contain two sheets: 'First Group' and 'Second Group'"
             )
             
-            if excel_file:
-                st.session_state.excel_file = excel_file
+            if uploaded_file:
                 try:
-                    excel_data = pd.ExcelFile(excel_file)
-                    st.success(f"✓ File loaded: {excel_file.name}")
+                    # Preview the uploaded file
+                    excel_data = pd.ExcelFile(uploaded_file)
+                    st.success(f"✅ File uploaded: {uploaded_file.name}")
                     st.info(f"Sheets found: {', '.join(excel_data.sheet_names)}")
                     
-                    # Preview data
+                    # Show preview of data
                     if 'First Group' in excel_data.sheet_names:
-                        st.write("**First Group Preview:**")
                         df_first = pd.read_excel(excel_data, sheet_name='First Group', header=None)
-                        df_first = fix_dataframe_types(df_first)
+                        st.write("**First Group Preview:**")
                         st.dataframe(df_first.head(), use_container_width=True)
                         st.caption(f"Total rows: {len(df_first)}")
                     
                     if 'Second Group' in excel_data.sheet_names:
-                        st.write("**Second Group Preview:**")
                         df_second = pd.read_excel(excel_data, sheet_name='Second Group', header=None)
-                        df_second = fix_dataframe_types(df_second)
+                        st.write("**Second Group Preview:**")
                         st.dataframe(df_second.head(), use_container_width=True)
                         st.caption(f"Total rows: {len(df_second)}")
                         
@@ -274,212 +285,209 @@ def main():
                     st.error(f"Error reading Excel file: {str(e)}")
         
         with col2:
-            st.subheader("📝 Prompt Text")
+            st.subheader("📝 Prompt Selection")
+            st.info("Select the type of mapping to load the appropriate prompt")
             
-            # Default laboratory mapping prompt
-            default_prompt = """You will receive 2 Json Arrays. First json array is a table with two columns "First Group Code", "First Group Name". Second json array is a table with two columns "Second Group Code", "Second Group Name".
-
-Your task is to choose every Laboratory Examinations "First Group Name" from the first group (you MUST output ALL first group Laboratory Examinations even if there are no matching Laboratory Examinations from the second group), search and compare each Laboratory Examination in all services of the second group to select and choose the most similar Laboratory Examination.
-
-Mapping should be based on word meaning and Laboratory Examination service name understanding and NOT depend on keyword or string similarity. Use your medical knowledge to understand each Laboratory Examination details including: technique (smear, culture, centrifuge, microscope, etc), approach (ELISA, immunofluorescence), substrate measured (IgM, IgG, Cholesterol), organism included (hepatitis B, HIV, chlamydia, etc), substrate level (direct/indirect/total bilirubin), anatomical site of sample (blood, CSF, urine), test type (quantitative or qualitative), chemical state (free T3 vs total T3), antigen or antibodies.
-
-Your response should be a JSON array with each item having 6 columns:
-1. First Group Code (exact value)
-2. First Group Name (exact value)
-3. Second Group Code (exact value or null)
-4. Second Group Name (exact value or null)
-5. Similarity Score (1-100)
-6. Similarity Reason
-
-Output ALL first group items. If no match, use null for Second Group fields and score <80."""
+            # Create three columns for the selection buttons
+            button_col1, button_col2, button_col3 = st.columns(3)
             
-            prompt_text = st.text_area(
-                "Enter or paste your prompt",
-                height=200,
-                value=default_prompt,
-                placeholder="Enter the prompt for mapping...",
-                help="This prompt will guide the AI in mapping the items"
+            with button_col1:
+                if st.button("🧪 Lab", use_container_width=True, type="primary"):
+                    st.session_state.selected_prompt_type = "Lab"
+                    
+            with button_col2:
+                if st.button("📷 Radiology", use_container_width=True, type="primary"):
+                    st.session_state.selected_prompt_type = "Radiology"
+                    
+            with button_col3:
+                if st.button("🔧 Service", use_container_width=True, type="primary"):
+                    st.session_state.selected_prompt_type = "Service"
+            
+            # Alternative: Radio buttons
+            st.divider()
+            st.write("**Or select using radio buttons:**")
+            prompt_type_radio = st.radio(
+                "Select Prompt Type:",
+                ["Lab", "Radiology", "Service"],
+                horizontal=True,
+                index=None
             )
             
-            if prompt_text:
-                st.session_state.prompt_text = prompt_text
-                st.success(f"✓ Prompt loaded ({len(prompt_text)} characters)")
+            if prompt_type_radio:
+                st.session_state.selected_prompt_type = prompt_type_radio
+            
+            # Display selected prompt type and load prompt
+            if st.session_state.selected_prompt_type:
+                st.success(f"✅ Selected: **{st.session_state.selected_prompt_type}** Mapping")
+                
+                # Load and display prompt
+                prompt_text = load_prompt_from_file(st.session_state.selected_prompt_type)
+                if prompt_text:
+                    st.write("**Prompt Preview:**")
+                    with st.expander("View Full Prompt", expanded=False):
+                        st.text_area(
+                            "Prompt Content",
+                            value=prompt_text[:500] + "..." if len(prompt_text) > 500 else prompt_text,
+                            height=150,
+                            disabled=True
+                        )
+                    st.caption(f"Prompt length: {len(prompt_text)} characters")
+                else:
+                    st.error(f"Failed to load prompt for {st.session_state.selected_prompt_type}")
+            else:
+                st.warning("⚠️ Please select a prompt type")
+        
+        st.divider()
         
         # Process button
-        st.divider()
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🚀 Start Processing", 
-                        type="primary", 
-                        use_container_width=True,
-                        disabled=st.session_state.processing):
-                
-                if not st.session_state.excel_file:
-                    st.error("Please upload an Excel file")
-                elif not st.session_state.prompt_text:
-                    st.error("Please enter a prompt")
-                elif not api_key:
-                    st.error("Please enter your OpenAI API key")
+            if st.button(
+                "🚀 Start Mapping Process",
+                type="primary",
+                use_container_width=True,
+                disabled=not (uploaded_file and st.session_state.selected_prompt_type and Config.api_key)
+            ):
+                if not Config.api_key:
+                    st.error("❌ Please enter your OpenAI API key in the sidebar")
+                elif not uploaded_file:
+                    st.error("❌ Please upload an Excel file")
+                elif not st.session_state.selected_prompt_type:
+                    st.error("❌ Please select a prompt type (Lab, Radiology, or Service)")
                 else:
                     st.session_state.processing = True
                     st.rerun()
     
-    with tabs[1]:
+    with tab2:
         st.header("Processing")
         
         if st.session_state.processing:
-            # Update Config with user parameters
-            update_config_with_user_params(st.session_state.user_params)
+            # Load prompt based on selection
+            prompt_text = load_prompt_from_file(st.session_state.selected_prompt_type)
             
-            # Console output area
-            st.subheader("🖥️ Console Output")
-            console_placeholder = st.empty()
+            if not prompt_text:
+                st.error(f"❌ Failed to load {st.session_state.selected_prompt_type} prompt")
+                st.session_state.processing = False
+                st.stop()
             
-            # Progress bar
+            # Save uploaded file temporarily
+            temp_excel_path = "temp_input.xlsx"
+            with open(temp_excel_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # Create temp prompt file
+            temp_prompt_path = "temp_prompt.txt"
+            with open(temp_prompt_path, "w", encoding='utf-8') as f:
+                f.write(prompt_text)
+            
+            # Reset DataFrames
+            reset_dataframes()
+            
+            # Progress indicators
             progress_bar = st.progress(0)
             status_text = st.empty()
+            console_output = st.empty()
             
             # Capture console output
+            console_capture = StreamlitConsoleCapture(console_output)
             old_stdout = sys.stdout
-            console_capture = StreamlitConsoleCapture(console_placeholder)
             sys.stdout = console_capture
             
             try:
-                # Save uploaded files temporarily
-                with open("temp_input.xlsx", "wb") as f:
-                    f.write(st.session_state.excel_file.getvalue())
-                
-                with open("temp_prompt.txt", "w", encoding='utf-8') as f:
-                    f.write(st.session_state.prompt_text)
-                
-                # Reset DataFrames
-                reset_dataframes()
-                
-                # Update status
-                status_text.text("Processing data...")
+                status_text.text(f"Starting {st.session_state.selected_prompt_type} mapping process...")
                 progress_bar.progress(10)
                 
-                # Call processing function with user parameters
+                # Call the processing function
                 results = SendInputParts(
-                    excel_path="temp_input.xlsx",
-                    prompt_path="temp_prompt.txt",
-                    verbose=True,
-                    temperature=st.session_state.user_params['temperature'],
-                    top_p=st.session_state.user_params['top_p'],
-                    model=st.session_state.user_params['model'],
-                    max_batch_size=st.session_state.user_params['max_batch_size'],
-                    wait_between_batches=st.session_state.user_params['wait_between_batches']
+                    excel_path=temp_excel_path,
+                    prompt_path=temp_prompt_path,
+                    verbose=True
                 )
                 
                 progress_bar.progress(90)
                 
                 if results:
                     st.session_state.results = results
-                    st.session_state.dataframes = get_dataframes()
-                    status_text.text("Processing complete!")
+                    status_text.text("✅ Processing completed successfully!")
                     progress_bar.progress(100)
-                    st.success("✓ Processing completed successfully!")
                     
-                    # Save results
-                    SaveResults(results)
+                    # Show summary
+                    st.success(f"✅ {st.session_state.selected_prompt_type} Mapping completed successfully!")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Mappings", len(results.get("mappings", [])))
+                    with col2:
+                        stats = results.get("statistics", {})
+                        st.metric("Mapped Items", stats.get("mapped_count", 0))
+                    with col3:
+                        st.metric("Avg Score", f"{stats.get('avg_score', 0):.1f}")
                 else:
-                    st.error("✗ Processing failed. Check console output for details.")
-                
+                    st.error("❌ Processing failed. Check the console output for details.")
+                    
             except Exception as e:
-                st.error(f"Error during processing: {str(e)}")
+                st.error(f"❌ Error during processing: {str(e)}")
+                import traceback
                 st.code(traceback.format_exc())
-            
             finally:
                 # Restore stdout
                 sys.stdout = old_stdout
                 st.session_state.processing = False
                 
                 # Clean up temp files
-                try:
-                    Path("temp_input.xlsx").unlink(missing_ok=True)
-                    Path("temp_prompt.txt").unlink(missing_ok=True)
-                except:
-                    pass
+                import os
+                if os.path.exists(temp_excel_path):
+                    os.remove(temp_excel_path)
+                if os.path.exists(temp_prompt_path):
+                    os.remove(temp_prompt_path)
         else:
-            st.info("Click 'Start Processing' in the Data Input tab to begin")
+            st.info("👈 Please upload data and select a prompt type in the Input tab to start processing")
     
-    with tabs[2]:
+    with tab3:
         st.header("Results")
         
-        if st.session_state.results and st.session_state.dataframes:
-            # Display DataFrames
-            st.subheader("📊 Mapping Results")
+        if st.session_state.results:
+            # Get DataFrames
+            dataframes = get_dataframes()
             
-            df_mappings = st.session_state.dataframes.get('ApiMapping')
+            # Display mapping results
+            st.subheader("📊 Mapping Results")
+            df_mappings = dataframes.get('ApiMapping')
+            
             if df_mappings is not None and not df_mappings.empty:
-                # Add filters
-                col1, col2, col3 = st.columns(3)
+                # Filter options
+                col1, col2 = st.columns(2)
                 with col1:
-                    min_score = st.slider("Minimum Score Filter", 0, 100, 0, key="min_score_filter")
+                    show_mapped = st.checkbox("Show Mapped Only", value=False)
                 with col2:
-                    show_unmapped = st.checkbox("Show Unmapped Items", value=True, key="show_unmapped")
-                with col3:
-                    search_term = st.text_input("Search", placeholder="Search in results...", key="search_term")
-                
-                # Filter dataframe
-                filtered_df = df_mappings.copy()
-                
-                # Ensure Similarity Score is numeric
-                filtered_df['Similarity Score'] = pd.to_numeric(filtered_df['Similarity Score'], errors='coerce').fillna(0)
+                    min_score = st.slider("Minimum Score", 0, 100, 0)
                 
                 # Apply filters
+                filtered_df = df_mappings.copy()
+                if show_mapped:
+                    filtered_df = filtered_df[filtered_df['Second Group Code'].notna()]
                 filtered_df = filtered_df[filtered_df['Similarity Score'] >= min_score]
                 
-                if not show_unmapped:
-                    filtered_df = filtered_df[filtered_df['Second Group Code'].notna()]
-                    filtered_df = filtered_df[filtered_df['Second Group Code'] != '']
-                    filtered_df = filtered_df[filtered_df['Second Group Code'] != 'None']
-                
-                if search_term:
-                    mask = filtered_df.apply(lambda x: search_term.lower() in str(x).lower(), axis=1)
-                    filtered_df = filtered_df[mask.any(axis=1)]
-                
-                # Fix data types for display
-                display_df = fix_dataframe_types(filtered_df)
-                
-                # Display filtered results
                 st.dataframe(
-                    display_df,
+                    filtered_df,
                     use_container_width=True,
                     height=400
                 )
                 
-                # Statistics
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Total Mappings", len(df_mappings))
-                with col2:
-                    mapped = df_mappings['Second Group Code'].notna().sum()
-                    st.metric("Mapped Items", mapped)
-                with col3:
-                    unmapped = df_mappings['Second Group Code'].isna().sum()
-                    st.metric("Unmapped Items", unmapped)
-                with col4:
-                    # Ensure numeric for mean calculation
-                    numeric_scores = pd.to_numeric(df_mappings['Similarity Score'], errors='coerce')
-                    avg_score = numeric_scores.mean() if not numeric_scores.isna().all() else 0
-                    st.metric("Avg Score", f"{avg_score:.1f}")
-                
                 # Download buttons
-                st.divider()
+                st.subheader("📥 Download Results")
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
                     # Excel download
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        filtered_df.to_excel(writer, index=False, sheet_name='Mappings')
-                    excel_data = output.getvalue()
+                    excel_buffer = io.BytesIO()
+                    save_dataframes_to_excel(excel_buffer)
+                    excel_buffer.seek(0)
                     
                     st.download_button(
-                        label="📥 Download Excel",
-                        data=excel_data,
-                        file_name=f"mapping_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        label="📊 Download Excel",
+                        data=excel_buffer,
+                        file_name=f"{st.session_state.selected_prompt_type}_mapping_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
                 
@@ -487,125 +495,88 @@ Output ALL first group items. If no match, use null for Second Group fields and 
                     # CSV download
                     csv = filtered_df.to_csv(index=False)
                     st.download_button(
-                        label="📥 Download CSV",
+                        label="📄 Download CSV",
                         data=csv,
-                        file_name=f"mapping_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        file_name=f"{st.session_state.selected_prompt_type}_mappings_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                         mime="text/csv"
                     )
                 
                 with col3:
                     # JSON download
-                    def prepare_json_results(results):
-                        """Prepare results for JSON serialization"""
-                        json_safe_results = {}
-                        
-                        for key, value in results.items():
-                            if key == 'dataframes':
-                                continue
-                            elif isinstance(value, pd.DataFrame):
-                                json_safe_results[key] = value.to_dict('records')
-                            else:
-                                json_safe_results[key] = value
-                        
-                        if df_mappings is not None and not df_mappings.empty:
-                            json_safe_results['mappings'] = df_mappings.to_dict('records')
-                        
-                        return json_safe_results
-                    
-                    json_safe_results = prepare_json_results(st.session_state.results)
-                    json_str = json.dumps(json_safe_results, indent=2, ensure_ascii=False, default=str)
-                    
+                    json_str = json.dumps(st.session_state.results, indent=2, default=str)
                     st.download_button(
-                        label="📥 Download JSON",
+                        label="🔧 Download JSON",
                         data=json_str,
-                        file_name=f"mapping_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                        file_name=f"{st.session_state.selected_prompt_type}_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                         mime="application/json"
                     )
             else:
-                st.warning("No mapping results available")
+                st.info("No mapping results available yet")
         else:
-            st.info("No results yet. Process data first.")
+            st.info("👈 No results yet. Please process data first.")
     
-    with tabs[3]:
+    with tab4:
         st.header("Analytics")
         
-        if st.session_state.dataframes:
-            df_mappings = st.session_state.dataframes.get('ApiMapping')
-            df_calls = st.session_state.dataframes.get('ApiCall')
+        if st.session_state.results:
+            dataframes = get_dataframes()
+            df_mappings = dataframes.get('ApiMapping')
+            df_calls = dataframes.get('ApiCall')
             
             if df_mappings is not None and not df_mappings.empty:
-                # Ensure numeric data types for analytics
-                df_mappings['Similarity Score'] = pd.to_numeric(df_mappings['Similarity Score'], errors='coerce').fillna(0)
-                
                 col1, col2 = st.columns(2)
                 
                 with col1:
                     # Score distribution
                     st.subheader("📊 Score Distribution")
-                    valid_scores = df_mappings[df_mappings['Similarity Score'] > 0]
-                    if not valid_scores.empty:
-                        fig = px.histogram(
-                            valid_scores,
-                            x='Similarity Score',
-                            nbins=20,
-                            title="Distribution of Similarity Scores"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.info("No valid scores to display")
+                    fig = px.histogram(
+                        df_mappings,
+                        x='Similarity Score',
+                        nbins=20,
+                        title="Distribution of Similarity Scores"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
                 
                 with col2:
-                    # Mapping status pie chart
-                    st.subheader("🥧 Mapping Status")
+                    # Mapping status
+                    st.subheader("🎯 Mapping Status")
                     mapped_count = df_mappings['Second Group Code'].notna().sum()
                     unmapped_count = df_mappings['Second Group Code'].isna().sum()
                     
-                    if mapped_count > 0 or unmapped_count > 0:
-                        fig = go.Figure(data=[go.Pie(
-                            labels=['Mapped', 'Unmapped'],
-                            values=[mapped_count, unmapped_count],
-                            hole=.3
-                        )])
-                        fig.update_layout(title="Mapping Status Distribution")
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.info("No mapping data to display")
+                    fig = go.Figure(data=[go.Pie(
+                        labels=['Mapped', 'Unmapped'],
+                        values=[mapped_count, unmapped_count],
+                        hole=.3
+                    )])
+                    fig.update_layout(title="Mapping Status Distribution")
+                    st.plotly_chart(fig, use_container_width=True)
                 
                 # API Call Statistics
                 if df_calls is not None and not df_calls.empty:
                     st.subheader("📈 API Call Statistics")
                     
-                    # Ensure numeric data types
-                    numeric_columns = ['Latency', 'Input Tokens', 'Output Tokens', 'Total Tokens']
-                    for col in numeric_columns:
-                        if col in df_calls.columns:
-                            df_calls[col] = pd.to_numeric(df_calls[col], errors='coerce').fillna(0)
-                    
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
-                        st.metric("Total API Calls", len(df_calls))
+                        st.metric("Total Calls", len(df_calls))
                     with col2:
-                        avg_latency = df_calls['Latency'].mean() if 'Latency' in df_calls.columns else 0
-                        st.metric("Avg Latency", f"{avg_latency:.2f}s")
+                        st.metric("Avg Latency", f"{df_calls['Latency'].mean():.2f}s")
                     with col3:
-                        total_input = df_calls['Input Tokens'].sum() if 'Input Tokens' in df_calls.columns else 0
-                        st.metric("Total Input Tokens", f"{int(total_input):,}")
+                        st.metric("Total Tokens", f"{df_calls['Total Tokens'].sum():,}")
                     with col4:
-                        total_output = df_calls['Output Tokens'].sum() if 'Output Tokens' in df_calls.columns else 0
-                        st.metric("Total Output Tokens", f"{int(total_output):,}")
+                        st.metric("Prompt Type", st.session_state.selected_prompt_type)
                     
                     # Token usage over time
-                    if len(df_calls) > 1 and 'Input Tokens' in df_calls.columns and 'Output Tokens' in df_calls.columns:
-                        st.subheader("📊 Token Usage Over Time")
+                    if len(df_calls) > 1:
+                        st.subheader("🔤 Token Usage")
                         fig = go.Figure()
                         fig.add_trace(go.Scatter(
-                            x=list(range(1, len(df_calls) + 1)),
+                            x=df_calls.index,
                             y=df_calls['Input Tokens'],
                             mode='lines+markers',
                             name='Input Tokens'
                         ))
                         fig.add_trace(go.Scatter(
-                            x=list(range(1, len(df_calls) + 1)),
+                            x=df_calls.index,
                             y=df_calls['Output Tokens'],
                             mode='lines+markers',
                             name='Output Tokens'
@@ -616,34 +587,20 @@ Output ALL first group items. If no match, use null for Second Group fields and 
                             yaxis_title="Tokens"
                         )
                         st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Display parameters used
-                    st.subheader("⚙️ Parameters Used")
-                    params_data = [
-                        ["Model", st.session_state.user_params.get('model', 'N/A')],
-                        ["Temperature", str(st.session_state.user_params.get('temperature', 'N/A'))],
-                        ["Top P", str(st.session_state.user_params.get('top_p', 'N/A'))],
-                        ["Max Batch Size", str(st.session_state.user_params.get('max_batch_size', 'N/A'))],
-                        ["Wait Between Batches", f"{st.session_state.user_params.get('wait_between_batches', 'N/A')}s"]
-                    ]
-                    params_df = pd.DataFrame(params_data, columns=["Parameter", "Value"])
-                    params_df = fix_dataframe_types(params_df)
-                    st.dataframe(params_df, hide_index=True, use_container_width=True)
         else:
-            st.info("No analytics data available. Process data first.")
-
-def update_config_with_user_params(params):
-    """Update Config class with user parameters"""
-    Config.api_key = params['api_key']
-    Config.model = params['model']
-    Config.temperature = params['temperature']
-    Config.top_p = params['top_p']
-    Config.max_tokens = params['max_tokens']
-    Config.max_batch_size = params['max_batch_size']
-    Config.wait_between_batches = params['wait_between_batches']
-    Config.threshold = params['threshold']
-    Config.use_compact_json = params['use_compact_json']
-    Config.abbreviate_keys = params['abbreviate_keys']
+            st.info("👈 No analytics data available. Please process data first.")
+    
+    # Footer
+    st.divider()
+    st.markdown(
+        f"""
+        <div style='text-align: center; color: gray;'>
+            Laboratory Mapping Service v2.0 | Selected Mode: {st.session_state.selected_prompt_type or 'None'} | 
+            Model: {Config.model} | Temperature: {Config.temperature} | Threshold: {Config.threshold}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 if __name__ == "__main__":
     main()
