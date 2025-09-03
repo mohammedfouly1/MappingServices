@@ -1,4 +1,4 @@
-# streamlit_app.py
+# streamlit_app.py - FIXED VERSION
 import streamlit as st
 import pandas as pd
 import io
@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
+import tempfile
+import os
 
 # Import our modules
 from config import Config
@@ -18,12 +20,11 @@ from result_processor import get_dataframes, reset_dataframes, save_dataframes_t
 
 # Set page config
 st.set_page_config(
-    page_title="Laboratory Mapping Service",
-    page_icon="🔬",
+    page_title="Mapping Medical Services",
+    page_icon="🩺",  # stethoscope = general medical services
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 # Custom CSS
 st.markdown("""
 <style>
@@ -121,7 +122,7 @@ def load_prompt_from_file(prompt_type):
 
 def main():
     # Header
-    st.title("🔬 Laboratory Mapping Service")
+    st.title("🩺 Mapping Medical Services")
     st.markdown("### AI-Powered Mapping System with Batch Processing")
     
     # Initialize session state
@@ -133,6 +134,8 @@ def main():
         st.session_state.console_output = []
     if 'selected_prompt_type' not in st.session_state:
         st.session_state.selected_prompt_type = None
+    if 'uploaded_file_content' not in st.session_state:
+        st.session_state.uploaded_file_content = None
     
     # Sidebar Configuration
     with st.sidebar:
@@ -263,6 +266,10 @@ def main():
             
             if uploaded_file:
                 try:
+                    # Store the file content in session state
+                    st.session_state.uploaded_file_content = uploaded_file.read()
+                    uploaded_file.seek(0)  # Reset file pointer for preview
+                    
                     # Preview the uploaded file
                     excel_data = pd.ExcelFile(uploaded_file)
                     st.success(f"✅ File uploaded: {uploaded_file.name}")
@@ -280,6 +287,8 @@ def main():
                         st.write("**Second Group Preview:**")
                         st.dataframe(df_second.head(), use_container_width=True)
                         st.caption(f"Total rows: {len(df_second)}")
+                    
+                    excel_data.close()  # Close the ExcelFile object
                         
                 except Exception as e:
                     st.error(f"Error reading Excel file: {str(e)}")
@@ -370,76 +379,86 @@ def main():
                 st.session_state.processing = False
                 st.stop()
             
-            # Save uploaded file temporarily
-            temp_excel_path = "temp_input.xlsx"
-            with open(temp_excel_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            # Create temp prompt file
-            temp_prompt_path = "temp_prompt.txt"
-            with open(temp_prompt_path, "w", encoding='utf-8') as f:
-                f.write(prompt_text)
-            
-            # Reset DataFrames
-            reset_dataframes()
-            
-            # Progress indicators
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            console_output = st.empty()
-            
-            # Capture console output
-            console_capture = StreamlitConsoleCapture(console_output)
-            old_stdout = sys.stdout
-            sys.stdout = console_capture
+            # Create temporary files using tempfile module
+            temp_excel_fd, temp_excel_path = tempfile.mkstemp(suffix='.xlsx')
+            temp_prompt_fd, temp_prompt_path = tempfile.mkstemp(suffix='.txt')
             
             try:
-                status_text.text(f"Starting {st.session_state.selected_prompt_type} mapping process...")
-                progress_bar.progress(10)
+                # Write Excel content to temp file
+                with os.fdopen(temp_excel_fd, 'wb') as f:
+                    f.write(st.session_state.uploaded_file_content)
                 
-                # Call the processing function
-                results = SendInputParts(
-                    excel_path=temp_excel_path,
-                    prompt_path=temp_prompt_path,
-                    verbose=True
-                )
+                # Write prompt to temp file
+                with os.fdopen(temp_prompt_fd, 'w', encoding='utf-8') as f:
+                    f.write(prompt_text)
                 
-                progress_bar.progress(90)
+                # Reset DataFrames
+                reset_dataframes()
                 
-                if results:
-                    st.session_state.results = results
-                    status_text.text("✅ Processing completed successfully!")
-                    progress_bar.progress(100)
+                # Progress indicators
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                console_output = st.empty()
+                
+                # Capture console output
+                console_capture = StreamlitConsoleCapture(console_output)
+                old_stdout = sys.stdout
+                sys.stdout = console_capture
+                
+                try:
+                    status_text.text(f"Starting {st.session_state.selected_prompt_type} mapping process...")
+                    progress_bar.progress(10)
                     
-                    # Show summary
-                    st.success(f"✅ {st.session_state.selected_prompt_type} Mapping completed successfully!")
+                    # Call the processing function
+                    results = SendInputParts(
+                        excel_path=temp_excel_path,
+                        prompt_path=temp_prompt_path,
+                        verbose=True
+                    )
                     
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Total Mappings", len(results.get("mappings", [])))
-                    with col2:
-                        stats = results.get("statistics", {})
-                        st.metric("Mapped Items", stats.get("mapped_count", 0))
-                    with col3:
-                        st.metric("Avg Score", f"{stats.get('avg_score', 0):.1f}")
-                else:
-                    st.error("❌ Processing failed. Check the console output for details.")
+                    progress_bar.progress(90)
                     
-            except Exception as e:
-                st.error(f"❌ Error during processing: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
+                    if results:
+                        st.session_state.results = results
+                        status_text.text("✅ Processing completed successfully!")
+                        progress_bar.progress(100)
+                        
+                        # Show summary
+                        st.success(f"✅ {st.session_state.selected_prompt_type} Mapping completed successfully!")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Total Mappings", len(results.get("mappings", [])))
+                        with col2:
+                            stats = results.get("statistics", {})
+                            st.metric("Mapped Items", stats.get("mapped_count", 0))
+                        with col3:
+                            st.metric("Avg Score", f"{stats.get('avg_score', 0):.1f}")
+                    else:
+                        st.error("❌ Processing failed. Check the console output for details.")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error during processing: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                finally:
+                    # Restore stdout
+                    sys.stdout = old_stdout
+                    st.session_state.processing = False
+                    
             finally:
-                # Restore stdout
-                sys.stdout = old_stdout
-                st.session_state.processing = False
+                # Clean up temp files - use try/except to handle any errors
+                try:
+                    if os.path.exists(temp_excel_path):
+                        os.unlink(temp_excel_path)
+                except:
+                    pass  # Ignore errors during cleanup
                 
-                # Clean up temp files
-                import os
-                if os.path.exists(temp_excel_path):
-                    os.remove(temp_excel_path)
-                if os.path.exists(temp_prompt_path):
-                    os.remove(temp_prompt_path)
+                try:
+                    if os.path.exists(temp_prompt_path):
+                        os.unlink(temp_prompt_path)
+                except:
+                    pass  # Ignore errors during cleanup
         else:
             st.info("👈 Please upload data and select a prompt type in the Input tab to start processing")
     
